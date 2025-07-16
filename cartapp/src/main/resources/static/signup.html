@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign Up | SmartCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      padding: 1rem;
+    }
+    .signup-layout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3rem;
+      max-width: 1000px;
+      width: 100%;
+    }
+    .signup-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      padding: 2.5rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      animation: fadeSlideUp 0.6s ease;
+    }
+    .signup-card h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      color: #333;
+    }
+    .input-group {
+      margin-bottom: 1.3rem;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .input-group input:focus {
+      border-color: #4CAF50;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    .signup-card button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .signup-card button:hover {
+      background: #45a049;
+      transform: translateY(-1px);
+    }
+    .signup-card .link {
+      display: block;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+      text-decoration: none;
+    }
+    .signup-card .link:hover {
+      text-decoration: underline;
+      color: #4CAF50;
+    }
+    #signupMsg {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #ff4d4d;
+    }
+    .signup-icon {
+      flex-shrink: 0;
+    }
+    .signup-icon img {
+      max-width: 280px;
+      width: 100%;
+      opacity: 0.95;
+      animation: fadeSlideUp 0.7s ease;
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 768px) {
+      .signup-layout {
+        flex-direction: column-reverse;
+        text-align: center;
+      }
+      .signup-icon img {
+        width: 70%;
+        margin-bottom: 1rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="signup-layout">
+    <div class="signup-card">
+      <h2>📝 Create Account</h2>
+      <form id="signupForm">
+        <div class="input-group">
+          <input type="text" id="signup-name" placeholder="Full Name (optional)" />
+        </div>
+        <div class="input-group">
+          <input type="email" id="signup-email" placeholder="Email" required />
+        </div>
+        <div class="input-group">
+          <input type="password" id="signup-password" placeholder="Password" required />
+        </div>
+        <button type="submit">Sign Up</button>
+      </form>
+      <div id="signupMsg"></div>
+      <a href="/login.html" class="link">Already have an account? Login</a>
+    </div>
+
+    <div class="signup-icon">
+      <img src="https://cdn-icons-png.flaticon.com/512/921/921347.png" alt="Signup Icon" />
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("signupForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("signup-name").value.trim();
+      const email = document.getElementById("signup-email").value.trim();
+      const password = document.getElementById("signup-password").value;
+
+      try {
+        const registerRes = await fetch("/users/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: name, email, password })
+        });
+
+        if (!registerRes.ok) {
+          const error = await registerRes.text();
+          document.getElementById("signupMsg").innerText = "⚠️ Signup failed: " + error;
+          return;
+        }
+
+        const loginRes = await fetch("/users/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: name, password })
+        });
+
+        if (!loginRes.ok) {
+          document.getElementById("signupMsg").innerText = "⚠️ Signup worked, but login failed.";
+          return;
+        }
+
+        const data = await loginRes.json();
+        const token = data.token;
+
+        if (!token) {
+          document.getElementById("signupMsg").innerText = "⚠️ Login failed. Token not received.";
+          return;
+        }
+
+        // ✅ Store token and user details
+        sessionStorage.setItem("jwt", token);
+        sessionStorage.setItem("user", JSON.stringify({
+          id: data.id,
+          username: data.username,
+          role: data.role || "ROLE_USER"
+        }));
+        sessionStorage.setItem("userId", data.id || "");
+        sessionStorage.setItem("username", data.username || "");
+        sessionStorage.setItem("role", data.role || "ROLE_USER");
+
+        // 🔍 Decode role
+        let role = "ROLE_USER";
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          role = payload.role || "ROLE_USER";
+        } catch (err) {
+          console.warn("Token decoding failed:", err);
+        }
+
+        alert("✅ Signup & Login successful!");
+        window.location.href = role === "ROLE_ADMIN" ? "/admin.html" : "/index.html";
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById("signupMsg").innerText = "❌ Something went wrong.";
+      }
+    });
+  </script>
+</body>
+</html>

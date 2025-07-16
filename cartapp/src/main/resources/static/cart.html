@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🛒 SmartCart - Your Cart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      margin: 0;
+      padding: 0;
+      transition: background 0.3s ease;
+    }
+
+    body.dark {
+      background: #121212;
+      color: #f0f0f0;
+    }
+
+    #cart-section h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .cart-total {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .cart-actions {
+      margin-top: 2rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn.primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .btn.secondary {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    #payment-method label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-links {
+  display: flex;
+  gap: 1.5rem;
+  padding-right: 3.5rem; /* Push away from dark toggle */
+}
+
+.nav-links a {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+  color: #4CAF50;
+}
+
+
+    .nav-logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding: 1rem;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    #dark-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1100; /* Higher than navbar */
+  font-size: 1.4rem;
+  background: rgba(255, 255, 255, 0.4);
+  border: none;
+  border-radius: 50%;
+  padding: 0.6rem 0.8rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background 0.3s ease;
+}
+
+#dark-toggle:hover {
+  transform: scale(1.1) rotate(10deg);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+
+    @media (max-width: 600px) {
+      .cart-actions {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 🌙 Dark Mode Toggle (improved!) -->
+<button id="dark-toggle" title="Toggle Dark Mode">🌓</button>
+
+
+  <!-- ✅ Navbar -->
+  <nav class="navbar glass">
+    <a href="/about.html" class="nav-logo">🛒 SmartCart</a>
+    <div class="nav-links">
+      <a href="/index.html">🏠 Home</a>
+      <a href="/wishlist.html">💖 Wishlist</a>
+      <a href="/orders.html">📦 Orders</a>
+      <a href="/cart.html" class="nav-link cart-link">
+  🛍️ Cart <span id="cart-count" class="cart-count-badge">0</span>
+</a>
+
+    </div>
+  </nav>
+
+  <!-- ✅ Main Cart Section -->
+  <main class="container animate-slide-up">
+    <section id="cart-section" class="glass section">
+      <h2>🧾 Your Cart</h2>
+
+      <!-- 🛒 Cart Items -->
+      <div id="cart-items" class="cart-items"></div>
+      <div id="cart-total" class="cart-total">Total: ₹0</div>
+
+      <!-- 🚚 Shipping Address Form -->
+      <div id="address-form" style="margin-top: 30px;">
+        <h3>📦 Shipping Address</h3>
+        <input type="text" id="address-line" placeholder="📍 Address Line" required>
+        <input type="text" id="city" placeholder="🏙️ City" required>
+        <input type="text" id="state" placeholder="🌆 State" required>
+        <input type="text" id="zipcode" placeholder="📮 Zip Code" required>
+      </div>
+
+      <!-- 💳 Payment Method -->
+      <div id="payment-method" style="margin-top: 20px;">
+        <h3>💳 Payment Method</h3>
+        <label><input type="radio" name="payment" value="Cash" checked> 💵 Cash on Delivery</label>
+        <label><input type="radio" name="payment" value="UPI"> 📲 UPI</label>
+        <label><input type="radio" name="payment" value="Card"> 💳 Card</label>
+      </div>
+
+      <!-- ✅ Cart Action Buttons -->
+      <div class="cart-actions">
+        <button id="checkout-btn" class="btn primary">✅ Place Order</button>
+        <button id="clear-cart-btn" class="btn secondary">🧹 Clear Cart</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 🔔 Toast Notifications -->
+  <div id="toast-container"></div>
+
+  <!-- ✅ Footer -->
+  <footer class="footer glass">
+    <p>&copy; 2025 SmartCart. Made with 💖 by You.</p>
+  </footer>
+
+  <!-- ✅ App Logic -->
+<script src="/app.js" defer></script>
+
+
+<!-- 🌙 Dark Mode + Address Save Script -->
+<script>
+  const darkBtn = document.getElementById("dark-toggle");
+  darkBtn.onclick = () => {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  };
+  if (localStorage.getItem("darkMode") === "true") {
+    document.body.classList.add("dark");
+  }
+
+  // ✅ Prefill saved shipping address on load
+  window.addEventListener("DOMContentLoaded", () => {
+    const savedAddress = JSON.parse(localStorage.getItem("lastAddress"));
+    if (savedAddress) {
+      document.getElementById("address-line").value = savedAddress.addressLine || "";
+      document.getElementById("city").value = savedAddress.city || "";
+      document.getElementById("state").value = savedAddress.state || "";
+      document.getElementById("zipcode").value = savedAddress.zipcode || "";
+    }
+  });
+
+  // ✅ Save address to localStorage when placing order
+  document.getElementById("checkout-btn").addEventListener("click", () => {
+    const address = {
+      addressLine: document.getElementById("address-line").value,
+      city: document.getElementById("city").value,
+      state: document.getElementById("state").value,
+      zipcode: document.getElementById("zipcode").value,
+    };
+    localStorage.setItem("lastAddress", JSON.stringify(address));
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>SmartCart | Product Detail</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+      color: #222;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: #121212;
+      color: #eee;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    body.dark .navbar {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      font-weight: 500;
+      color: inherit;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      display: flex;
+      gap: 2.5rem;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      padding: 2.5rem;
+      animation: fadeSlide 0.4s ease;
+      flex-wrap: wrap;
+    }
+
+    body.dark .container {
+      background: #1e1e1e;
+    }
+
+    .product-image {
+      flex: 1 1 350px;
+      max-width: 420px;
+      border-radius: 16px;
+      object-fit: cover;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      width: 100%;
+    }
+
+    .product-info {
+      flex: 1 1 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .product-info h2 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .category-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      background: #f0f0f0;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+
+    body.dark .category-tag {
+      background: #333;
+      color: #ccc;
+    }
+
+    .product-description {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: #444;
+    }
+
+    body.dark .product-description {
+      color: #ccc;
+    }
+
+    .product-price {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-top: 1.5rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      flex: 1 1 180px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    .btn-cart {
+      background-color: #00c853;
+      color: white;
+    }
+
+    .btn-wishlist {
+      background-color: #ff4081;
+      color: white;
+    }
+
+    .actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: #333;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #eee;
+      transition: all 0.2s ease;
+    }
+
+    body.dark .back-link {
+      background: #2a2a2a;
+      color: #ccc;
+    }
+
+    .back-link:hover {
+      background: #ddd;
+    }
+
+    #recently-viewed {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+
+    .recent-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .recent-item {
+      width: 150px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      overflow: hidden;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+
+    .recent-item:hover {
+      transform: translateY(-4px);
+    }
+
+    .recent-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+
+    .recent-item p {
+      margin: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    body.dark .recent-item {
+      background: #1e1e1e;
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+
+    .toast {
+      background: #333;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-top: 10px;
+      animation: fadein 0.3s ease, fadeout 0.3s ease 2.5s;
+    }
+
+    @keyframes fadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadein {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeout {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+
+    #dark-toggle {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="dark-toggle" title="Toggle Dark Mode">🌓</button>
+  <nav class="navbar glass">
+    <a href="/about.html" class="nav-logo">🛒 SmartCart</a>
+    <div class="nav-links">
+      <a href="/wishlist.html" class="nav-link">💖 Wishlist</a>
+      <a href="/cart.html" class="nav-link">🧺 Cart</a>
+    </div>
+  </nav>
+  <div class="container">
+    <img id="product-image" class="product-image" src="" alt="Product Image" />
+    <div class="product-info">
+      <div>
+        <span class="category-tag" id="product-category"></span>
+        <h2 id="product-name"></h2>
+        <p class="product-description" id="product-description"></p>
+        <div class="product-price" id="product-price"></div>
+      </div>
+      <div class="actions">
+        <input type="number" id="product-qty" min="1" value="1"
+          style="padding:10px; width:80px; border-radius:10px; border:1px solid #ccc;" />
+        <span id="stock-left" style="font-size:0.9rem; color:gray; margin-left:10px;"></span>
+        <button class="btn-cart" id="add-to-cart">🛒 Add to Cart</button>
+        <button class="btn-wishlist" id="add-to-wishlist">❤️ Add to Wishlist</button>
+      </div>
+
+      <a href="/index.html" class="back-link">← Back to Home</a>
+    </div>
+  </div>
+  <div id="recently-viewed">
+    <h3>Recently Viewed Products</h3>
+    <div class="recent-list" id="recent-list"></div>
+  </div>
+  <div id="toast-container"></div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("id");
+    if (!productId) {
+      document.querySelector(".container").innerHTML = "<p>❌ Invalid product ID.</p>";
+    } else {
+      loadProduct(productId);
+      addToRecentlyViewed(productId);
+      showRecentlyViewed();
+    }
+    function showToast(msg) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+    async function loadProduct(id) {
+      try {
+        const res = await fetch(`/products/${id}`);
+        if (!res.ok) throw new Error("Product not found");
+        const product = await res.json();
+        document.getElementById("product-image").src = product.imageUrl || "https://via.placeholder.com/300";
+        document.getElementById("product-name").textContent = product.name;
+        document.getElementById("product-price").textContent = `₹${product.price.toFixed(2)}`;
+        document.getElementById("product-qty").max = product.quantity;
+        document.getElementById("stock-left").textContent = product.quantity > 0 ? `🧾 ${product.quantity} left` : "❌ Out of stock";
+        document.getElementById("product-qty").disabled = product.quantity === 0;
+        document.getElementById("add-to-cart").disabled = product.quantity === 0;
+
+        const descElem = document.getElementById("product-description");
+
+        if (product.description && product.description.trim() !== "") {
+          descElem.textContent = product.description;
+        } else {
+          const category = product.category?.toLowerCase() || "";
+          let sampleDesc = "No description available.";
+
+          if (category.includes("electronics")) {
+            sampleDesc = "Discover the latest innovation in electronics, built for performance and style.";
+          } else if (category.includes("bags")) {
+            sampleDesc = "A perfect blend of fashion and utility – carry your essentials in style.";
+          } else if (category.includes("hats")) {
+            sampleDesc = "Top off your outfit with this stylish and comfortable hat.";
+          } else if (category.includes("women's accessories")) {
+            sampleDesc = "Add charm and elegance with these beautifully crafted accessories.";
+          } else if (category.includes("women's clothing")) {
+            sampleDesc = "Dress to impress with our trendy and versatile women’s wear.";
+          } else if (category.includes("women's shoes")) {
+            sampleDesc = "Walk in confidence with these stylish and comfortable women’s shoes.";
+          } else if (category.includes("men's accessories")) {
+            sampleDesc = "Complete your look with sleek and practical accessories for men.";
+          } else if (category.includes("men's clothing")) {
+            sampleDesc = "Elevate your wardrobe with modern, comfortable men’s fashion.";
+          } else if (category.includes("men's shoes")) {
+            sampleDesc = "Step confidently with premium shoes tailored for comfort and style.";
+          } else if (category.includes("shoes")) {
+            sampleDesc = "Designed for comfort and performance – the ideal footwear for every step.";
+          } else {
+            sampleDesc = "Explore quality, value, and style with this must-have product.";
+          }
+
+          descElem.textContent = sampleDesc;
+        }
+
+        document.getElementById("add-to-cart").onclick = async () => {
+          const token = sessionStorage.getItem("jwt");
+          if (!token) {
+            alert("🚫 You must be logged in to add to cart.");
+            window.location.href = "/login.html";
+            return;
+          }
+
+          const qtyInput = document.getElementById("product-qty");
+          let quantity = parseInt(qtyInput?.value || "1");
+          if (isNaN(quantity) || quantity < 1) quantity = 1;
+
+          if (quantity > product.quantity) {
+            showToast("⚠️ Not enough stock");
+            return;
+          }
+
+          let cartId = sessionStorage.getItem("cartId");
+          if (!cartId) {
+            const cartRes = await fetch("/cart", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+            if (!cartRes.ok) return showToast("❌ Failed to create cart.");
+            const cart = await cartRes.json();
+            cartId = cart.id;
+            sessionStorage.setItem("cartId", cartId);
+          }
+
+          const addRes = await fetch(`/cart/${cartId}/add?productId=${product.id}&quantity=${quantity}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          showToast(addRes.ok ? "🛒 Added to cart!" : "❌ Failed to add to cart.");
+        };
+
+      } catch (e) {
+        document.querySelector(".container").innerHTML = "<p>⚠️ Failed to load product.</p>";
+        console.error(e);
+      }
+    }
+    function addToRecentlyViewed(id) {
+      let recent = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+      recent = recent.filter(pid => pid !== id);
+      recent.unshift(id);
+      if (recent.length > 8) recent.pop();
+      localStorage.setItem("recentlyViewed", JSON.stringify(recent));
+    }
+    async function showRecentlyViewed() {
+      const recent = JSON.parse(localStorage.getItem("recentlyViewed") || "[]").filter(id => id !== productId);
+      const container = document.getElementById("recent-list");
+      if (recent.length === 0) {
+        container.innerHTML = "<p>No recently viewed products.</p>";
+        return;
+      }
+      for (let id of recent) {
+        try {
+          const res = await fetch(`/products/${id}`);
+          if (!res.ok) continue;
+          const product = await res.json();
+          const div = document.createElement("div");
+          div.className = "recent-item";
+          div.innerHTML = `
+            <img src="${product.imageUrl || "https://via.placeholder.com/150"}" />
+            <p>${product.name}</p>
+          `;
+          div.onclick = () => window.location.href = "product.html?id=" + id;
+          container.appendChild(div);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    const darkToggle = document.getElementById("dark-toggle");
+    darkToggle.onclick = () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    };
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
+    }
+  </script>
+</body>
+
+</html>

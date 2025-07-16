@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🛒 SmartCart - Modern Shopping</title>
+
+  <!-- Fonts & Styles -->
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+
+ .profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-icon {
+  font-size: 1.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 15px;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 38px;
+  right: 0;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-menu li {
+  border-bottom: 1px solid #eee;
+}
+
+.dropdown-menu li a {
+  display: block;
+  padding: 12px 16px;
+  color: #333;
+  text-decoration: none;
+}
+
+.dropdown-menu li a:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-menu.show {
+  display: block !important;
+}
+
+
+
+    select, input[type="text"] {
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      background: white;
+      color: #333;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    body.dark select,
+    body.dark input[type="text"] {
+      background: #1e1e1e;
+      color: #f0f0f0;
+      border-color: #555;
+    }
+
+    .grid {
+      margin-top: 20px;
+    }
+
+     #wishlist-float-btn {
+    position: fixed;
+    bottom: 80px; /* Better placement on desktop */
+    right: 30px;
+    background: linear-gradient(145deg, #ff6fa0, #ff4081);
+    color: #fff;
+    font-size: 1.5rem;
+    padding: 14px 16px;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    text-decoration: none;
+    z-index: 999;
+    transition: all 0.3s ease;
+  }
+
+  #wishlist-float-btn:hover {
+    transform: scale(1.1);
+    background: linear-gradient(145deg, #e73370, #ff4081);
+  }
+
+  /* Dark mode variant */
+  body.dark #wishlist-float-btn {
+    background: linear-gradient(145deg, #ffb6cf, #ff6fa0);
+    color: #000;
+  }
+
+  /* 📱 Responsive for Mobile Devices */
+  @media (max-width: 600px) {
+    #wishlist-float-btn {
+      bottom: 20px;
+      right: 20px;
+      font-size: 1.2rem;
+      padding: 12px;
+    }
+  }
+
+  .pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pagination-controls button {
+  padding: 10px 16px;
+  font-size: 1rem;
+  border: none;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pagination-controls button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+body.dark .pagination-controls button {
+  background-color: #2e7d32;
+}
+
+.pagination-controls span {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.quantity-input {
+  width: 60px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.product-quantity-wrapper {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stock-info {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+body.dark .stock-info {
+  color: #ccc;
+}
+
+   </style>
+</head>
+<body>
+  <!-- 🌙 Dark Mode Toggle -->
+  <button id="dark-toggle" title="Toggle Dark Mode">🌓</button>
+
+  <!-- ✅ Navbar -->
+  <nav class="navbar glass">
+    <div class="container nav-content">
+      <a href="/about.html" class="nav-logo">🛒 SmartCart</a>
+      <div class="nav-links">
+        <a href="/cart.html" class="nav-link cart-link">
+          🛍️ Cart <span id="cart-count" class="cart-count-badge">0</span>
+        </a>
+
+        <!-- 👤 Profile Dropdown -->
+        <div class="profile-dropdown">
+  <button id="profile-btn" class="profile-icon" title="Account">👤</button>
+  <ul class="dropdown-menu" id="dropdown-menu">
+    <li><a href="/profile.html">👤 View Profile</a></li>
+    <li><a href="/orders.html">📦 Your Orders</a></li>
+    <li><a href="#" id="logout-btn">🚪 Logout</a></li>
+  </ul>
+</div>
+
+      </div>
+    </div>
+  </nav>
+
+  <a href="/wishlist.html" id="wishlist-float-btn" title="View Wishlist">💖</a>
+
+  <!-- ✨ Header -->
+  <header class="header glass animate-fade-in">
+    <div class="container">
+      <h1 class="brand">🛒 SmartCart</h1>
+      <p class="subtitle">Your intelligent shopping assistant</p>
+    </div>
+  </header>
+
+  <!-- 🧺 Product Browsing Section -->
+  <main class="container animate-slide-up">
+  <section id="products-section" class="glass section">
+    <div class="section-header">
+      <h2>🧺 Browse Products</h2>
+      <div class="filters">
+        <input type="text" id="search-input" placeholder="🔍 Search products..." />
+        <select id="category-select">
+          <option value="all">📂 All Categories</option>
+        </select>
+        <select id="sort-select">
+          <option value="">🔽 Sort by</option>
+          <option value="price-asc">💸 Price: Low to High</option>
+          <option value="price-desc">💰 Price: High to Low</option>
+          <option value="name-asc">🔤 Name: A-Z</option>
+          <option value="name-desc">🔡 Name: Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="product-list" class="grid"></div>
+
+    <!-- Pagination Controls -->
+    <div id="pagination-controls" style="display: flex; justify-content: center; margin-top: 20px; gap: 10px;">
+      <button id="prev-page" disabled>⬅️ Previous</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page">Next ➡️</button>
+    </div>
+  </section>
+</main>
+
+
+  <div id="toast-container"></div>
+
+  <!-- 🔻 Footer -->
+  <footer class="footer glass animate-fade-in">
+    <div class="container">
+      <p>&copy; 2025 SmartCart. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+<!-- Scripts -->
+<script src="/app.js" defer></script>
+
+<script defer>
+  document.addEventListener("DOMContentLoaded", () => {
+    const profileBtn = document.getElementById("profile-btn");
+    const dropdownMenu = document.getElementById("dropdown-menu");
+
+    profileBtn?.addEventListener("click", (e) => {
+      e.stopPropagation(); // prevent body click from immediately closing it
+      dropdownMenu?.classList.toggle("show");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!dropdownMenu?.contains(e.target) && !profileBtn?.contains(e.target)) {
+        dropdownMenu?.classList.remove("show");
+      }
+    });
+
+    // ✅ Logout functionality
+    document.getElementById("logout-btn")?.addEventListener("click", function (e) {
+      e.preventDefault();
+      sessionStorage.clear();
+      alert("Logged out!");
+      window.location.href = "/login.html";
+    });
+  });
+</script>
+
+</body>
+</html>

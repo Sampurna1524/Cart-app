@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login | SmartCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .login-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 1000px;
+      width: 100%;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .login-illustration {
+      flex: 1;
+      max-width: 400px;
+    }
+    .login-illustration img {
+      width: 100%;
+      border-radius: 12px;
+      opacity: 0.95;
+    }
+    .login-container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+      padding: 3rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      animation: fadeSlideUp 0.5s ease;
+    }
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-size: 2rem;
+      color: #333;
+    }
+    .login-container p.subtitle {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .input-group input:focus {
+      border-color: #4CAF50;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    .login-container button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .login-container button:hover {
+      background: #45a049;
+      transform: translateY(-1px);
+    }
+    .login-container .link {
+      display: block;
+      text-align: center;
+      margin-top: 1.2rem;
+      font-size: 0.92rem;
+      color: #555;
+      text-decoration: none;
+    }
+    .login-container .link:hover {
+      text-decoration: underline;
+      color: #4CAF50;
+    }
+    #errorMsg {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #ff4d4d;
+    }
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (max-width: 768px) {
+      .login-wrapper {
+        flex-direction: column;
+        align-items: center;
+      }
+      .login-illustration {
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-illustration">
+      <img src="https://cdn-icons-png.flaticon.com/512/3361/3361585.png" alt="Shopping login illustration" />
+    </div>
+
+    <div class="login-container">
+      <h2>Welcome to SmartCart</h2>
+      <p class="subtitle">Your smart shopping starts here 🛍️</p>
+
+      <form id="loginForm">
+        <div class="input-group">
+          <input type="text" id="username" placeholder="Email" required />
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" placeholder="Password" required />
+        </div>
+        <button type="submit">Login</button>
+      </form>
+
+      <div id="errorMsg"></div>
+
+      <a href="/signup.html" class="link">Don't have an account? Sign up</a>
+    </div>
+  </div>
+
+  <script>
+  document.getElementById("loginForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch("/users/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      document.getElementById("errorMsg").innerText = "⚠️ Login failed: " + err;
+      return;
+    }
+
+    const data = await res.json();
+    if (!data.token) {
+      document.getElementById("errorMsg").innerText = "⚠️ Login failed: token missing.";
+      return;
+    }
+
+    const token = data.token;
+    const user = {
+      id: data.id,
+      username: data.username,
+      role: data.role || "ROLE_USER"
+    };
+
+    sessionStorage.setItem("jwt", token);
+    sessionStorage.setItem("user", JSON.stringify(user)); // ✅ Required for app.js
+
+    let role = "ROLE_USER";
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      role = payload.role || "ROLE_USER";
+    } catch (err) {
+      console.warn("Failed to decode token:", err);
+    }
+
+    alert("✅ Login successful!");
+
+    if (role === "ROLE_ADMIN") {
+      window.location.href = "/admin.html";
+    } else {
+      window.location.href = "/index.html";
+    }
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("errorMsg").innerText = "❌ Something went wrong. Try again.";
+  }
+});
+
+  </script>
+</body>
+</html>

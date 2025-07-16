@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>📦 My Orders - SmartCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      transition: background 0.3s ease;
+    }
+
+    body.dark {
+      background: #121212;
+      color: #f0f0f0;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-links {
+  display: flex;
+  gap: 1.5rem;
+  padding-right: 3.5rem; /* Push away from dark toggle */
+}
+
+.nav-links a {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+  color: #4CAF50;
+}
+
+
+    .nav-logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .section {
+      margin: 2rem auto;
+      padding: 2rem;
+      max-width: 800px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .order-card {
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.3);
+      border-left: 6px solid #4CAF50;
+      transition: transform 0.2s ease;
+    }
+
+    .order-card:hover {
+      transform: scale(1.01);
+    }
+
+    .order-card h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.2rem;
+      color: #333;
+    }
+
+    .order-card p {
+      margin: 0.3rem 0;
+      font-size: 0.95rem;
+    }
+
+    summary {
+      cursor: pointer;
+      margin-top: 1rem;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .order-items {
+      list-style: none;
+      padding-left: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .order-items li {
+      padding: 4px 0;
+      font-size: 0.9rem;
+    }
+
+    #dark-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1100; /* Higher than navbar */
+  font-size: 1.4rem;
+  background: rgba(255, 255, 255, 0.4);
+  border: none;
+  border-radius: 50%;
+  padding: 0.6rem 0.8rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background 0.3s ease;
+}
+
+#dark-toggle:hover {
+  transform: scale(1.1) rotate(10deg);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+
+    .footer {
+      margin-top: 3rem;
+      padding: 1rem;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(5px);
+    }
+
+    @media (max-width: 600px) {
+      .section {
+        padding: 1rem;
+        margin: 1rem;
+      }
+
+      .navbar {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .order-card {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 🌙 Dark Mode Toggle -->
+  <button id="dark-toggle" title="Toggle Dark Mode">🌓</button>
+
+  <!-- ✅ Navbar -->
+  <nav class="navbar glass">
+    <a href="/about.html" class="nav-logo">🛒 SmartCart</a>
+    <div class="nav-links">
+      <a href="/index.html">🏠 Home</a>
+      <a href="/cart.html">🛒 Cart</a>
+      <a href="/wishlist.html">💖 Wishlist</a>
+    </div>
+  </nav>
+
+  <!-- 📦 Order History -->
+  <main class="container animate-slide-up">
+    <section class="glass section">
+      <h2>📜 My Orders</h2>
+      <div id="orders-list">
+        <p>Loading orders...</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer glass">
+    <p>&copy; 2025 SmartCart. All rights reserved.</p>
+  </footer>
+
+  <!-- ✅ Orders Script -->
+  <script>
+    const ordersList = document.getElementById("orders-list");
+
+    function authHeaders() {
+      const token = sessionStorage.getItem("jwt");
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+
+    async function loadOrders() {
+      const user = JSON.parse(sessionStorage.getItem("user"));
+      if (!user) {
+        window.location.href = "/login.html";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/orders/user/${user.id}`, {
+          headers: authHeaders()
+        });
+
+        if (!res.ok) throw new Error("Failed to load orders");
+
+        const orders = await res.json();
+
+        if (orders.length === 0) {
+          ordersList.innerHTML = "<p>🛑 No past orders found.</p>";
+          return;
+        }
+
+        ordersList.innerHTML = "";
+        orders.forEach(order => {
+          const orderDiv = document.createElement("div");
+          orderDiv.className = "order-card glass";
+
+          orderDiv.innerHTML = `
+            <h3>🧾 Order #${order.id}</h3>
+            <p><strong>📅 Date:</strong> ${formatDate(order.createdAt)}</p>
+            <p><strong>💰 Total:</strong> ₹${order.total.toFixed(2)}</p>
+            <p><strong>💳 Payment:</strong> ${order.paymentMethod}</p>
+            <p><strong>📦 Shipping:</strong> ${order.shippingAddress}</p>
+            <details>
+              <summary>🔍 View Items (${order.items.length})</summary>
+              <ul class="order-items">
+                ${order.items.map(item => `
+                  <li>🛍️ ${item.product.name} — ₹${item.price} × ${item.quantity}</li>
+                `).join("")}
+              </ul>
+            </details>
+          `;
+          ordersList.appendChild(orderDiv);
+        });
+
+      } catch (err) {
+        console.error("❌ Failed to fetch orders:", err);
+        ordersList.innerHTML = "<p>❌ Failed to load order history.</p>";
+      }
+    }
+
+    // 🌙 Dark mode toggle
+    const darkBtn = document.getElementById("dark-toggle");
+    darkBtn.onclick = () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    };
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
+    }
+
+    // 🔃 Load orders on page load
+    window.addEventListener("DOMContentLoaded", loadOrders);
+  </script>
+</body>
+</html>

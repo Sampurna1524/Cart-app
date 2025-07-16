@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>👤 My Profile - SmartCart</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      transition: background 0.3s ease;
+    }
+
+    nav.navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav .nav-logo {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #333;
+      text-decoration: none;
+    }
+
+    nav .nav-links a {
+      margin-left: 1.5rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #333;
+      transition: color 0.3s ease;
+    }
+
+    nav .nav-links a:hover {
+      color: #ff4081;
+    }
+
+    .profile-container {
+      max-width: 460px;
+      margin: 6rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+      text-align: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .profile-avatar {
+      margin-bottom: 1rem;
+    }
+
+    .profile-avatar img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #ff4081;
+      box-shadow: 0 0 18px rgba(255, 64, 129, 0.3);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .profile-avatar span {
+      font-size: 5rem;
+      background: linear-gradient(135deg, #ff6fa0, #ff4081);
+      color: white;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      box-shadow: 0 0 15px rgba(255, 64, 129, 0.4);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .profile-container h2 {
+      font-size: 1.8rem;
+      margin: 0.5rem 0;
+    }
+
+    .profile-container p {
+      margin: 0.3rem 0;
+      color: #555;
+      font-size: 1rem;
+    }
+
+    .profile-actions {
+      margin-top: 1.8rem;
+    }
+
+    .profile-actions input[type="file"],
+    .profile-actions button {
+      margin-top: 12px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .profile-actions button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 12px;
+      background: #ff4081;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .profile-actions button:hover {
+      background: #e73370;
+    }
+
+    input[type="file"] {
+      font-size: 0.95rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 12px rgba(255, 64, 129, 0.3); }
+      50% { box-shadow: 0 0 24px rgba(255, 64, 129, 0.5); }
+      100% { box-shadow: 0 0 12px rgba(255, 64, 129, 0.3); }
+    }
+
+    /* 🌙 Dark Mode */
+    body.dark {
+      background-color: #121212;
+      color: #f0f0f0;
+    }
+
+    body.dark .profile-container {
+      background-color: #1e1e1e;
+    }
+
+    body.dark .profile-container p {
+      color: #ccc;
+    }
+
+    body.dark .profile-actions button {
+      background: #ff6fa0;
+      color: black;
+    }
+
+    body.dark nav.navbar {
+      background-color: #1a1a1a;
+    }
+
+    body.dark nav .nav-logo,
+    body.dark nav .nav-links a {
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar glass">
+    <a href="/about.html" class="nav-logo">🛒 SmartCart</a>
+    <div class="nav-links">
+      <a id="home-link" href="index.html">🏠 Home</a>
+      <a href="/cart.html">🛒 Cart</a>
+    </div>
+  </nav>
+
+  <div class="profile-container glass">
+    <div class="profile-avatar" id="avatar-container">
+      <span>👤</span>
+    </div>
+    <h2 id="username">Loading...</h2>
+    <p id="email">📧 Loading...</p>
+    <p id="role">🔐 Loading...</p>
+
+    <div class="profile-actions">
+      <input type="file" id="profilePicInput" accept="image/*" />
+      <button id="logout-btn">🚪 Logout</button>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
+    }
+
+    const token = sessionStorage.getItem("jwt");
+    const userId = sessionStorage.getItem("userId");
+
+    if (!token) {
+      alert("You are not logged in. Redirecting to login...");
+      window.location.href = "/login.html";
+    }
+
+    fetch("/users/me", {
+      method: "GET",
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    })
+    .then(data => {
+      document.getElementById("username").textContent = data.username || "Unknown";
+      document.getElementById("email").textContent = `📧 ${data.email || "Not provided"}`;
+      document.getElementById("role").textContent = `🔐 Role: ${data.role || "USER"}`;
+
+      const homeLink = document.getElementById("home-link");
+      homeLink.href = data.role === "ROLE_ADMIN" ? "/admin.html" : "/index.html";
+
+      if (data.profileImageUrl) {
+        document.getElementById("avatar-container").innerHTML =
+          `<img src="${data.profileImageUrl}" alt="Profile Picture" />`;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Session expired. Please login again.");
+      sessionStorage.clear();
+      window.location.href = "/login.html";
+    });
+
+    document.getElementById("profilePicInput").addEventListener("change", async function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch(`/users/${userId}/upload-profile`, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token },
+          body: formData
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          document.getElementById("avatar-container").innerHTML =
+            `<img src="${result.imageUrl}" alt="Profile Picture" />`;
+          alert("✅ Profile picture updated!");
+        } else {
+          alert("❌ Upload failed: " + result);
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("Something went wrong while uploading.");
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      sessionStorage.clear();
+      window.location.href = "/login.html";
+    });
+  </script>
+</body>
+</html>

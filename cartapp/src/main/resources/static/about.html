@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ℹ️ About Us - SmartCart</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #e0f7fa, #fce4ec);
+      color: #333;
+      transition: background 0.3s ease;
+    }
+
+    body.dark {
+      background: #121212;
+      color: #f0f0f0;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+
+    .nav-logo {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #333;
+      text-decoration: none;
+    }
+
+    .nav-links {
+  display: flex;
+  gap: 1.5rem;
+  padding-right: 5.5rem; /* Increased space to avoid overlap */
+}
+
+
+    .nav-links a {
+      text-decoration: none;
+      color: #333;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: #ff4081;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 5rem auto;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+      backdrop-filter: blur(12px);
+      animation: slideFade 1s ease;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #ff4081;
+    }
+
+    p {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      margin: 1rem 0;
+    }
+
+    .highlight {
+      font-weight: 600;
+      color: #4CAF50;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.3);
+      margin-top: 4rem;
+    }
+
+    @keyframes slideFade {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Dark mode */
+    body.dark .container {
+      background: rgba(30, 30, 30, 0.8);
+    }
+
+    body.dark .nav-logo,
+    body.dark .nav-links a {
+      color: #fff;
+    }
+
+    body.dark .team-member {
+      background-color: #1f1f1f;
+      color: #eee;
+    }
+
+    body.dark .footer {
+      background: rgba(40, 40, 40, 0.7);
+      color: #ccc;
+    }
+
+    #dark-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      font-size: 1.3rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+      z-index: 1000;
+      transition: 0.3s ease;
+    }
+
+    #dark-toggle:hover {
+      background: rgba(255, 255, 255, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <button id="dark-toggle" title="Toggle Dark Mode">🌓</button>
+
+  <!-- ✅ Navbar -->
+  <nav class="navbar glass">
+    <div class="nav-logo">🛒 SmartCart</div>
+    <div class="nav-links">
+      <a href="/index.html">Home</a>
+      <a href="/cart.html">Cart</a>
+      <a href="/wishlist.html">Wishlist</a>
+    </div>
+  </nav>
+
+  <!-- ✅ Main Content -->
+  <div class="container">
+    <h1>About SmartCart 🛍️</h1>
+    <p>Welcome to <span class="highlight">SmartCart</span> – your ultimate destination for seamless, smart, and stylish shopping. 🌟</p>
+
+    <p>We created SmartCart with a simple goal: to make your online shopping experience more intuitive, more fun, and more personal. From wishlist magic ✨ to real-time cart management 🛒, we’ve built every feature with ❤️ and purpose.</p>
+
+    <p>Whether you're a casual shopper or a deal hunter, we’re here to bring joy and ease to your buying journey. Our mission is to provide a platform that is not just functional but also delightful to use.</p>
+
+
+    <p style="text-align:center; margin-top: 3rem;">Thank you for being part of the SmartCart journey. Here's to shopping smarter, together! 🎉</p>
+  </div>
+
+  <!-- ✅ Footer -->
+  <footer class="footer glass">
+    <p>&copy; 2025 SmartCart. Made with 💖 by You.</p>
+  </footer>
+
+  <!-- ✅ Dark Mode Script -->
+  <script>
+    const darkBtn = document.getElementById("dark-toggle");
+    darkBtn.onclick = () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    };
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
+    }
+  </script>
+</body>
+</html>
