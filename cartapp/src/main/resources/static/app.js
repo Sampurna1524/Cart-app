@@ -9,11 +9,6 @@ const clearCartBtn = document.getElementById("clear-cart-btn");
 
 let cartId = null;
 let allProducts = [];
-let currentPage = 0;
-let totalPages = 1;
-const pageSize = 10;
-let activeCategory = "all"; // 🆕 Track selected category
-
 
 const isCartPage = cartItems && cartTotal;
 
@@ -130,9 +125,7 @@ try {
     return;
   }
 
-  if (typeof loadCategories === "function") await loadCategories();
   if (typeof loadProducts === "function") await loadProducts();
-
   if (isCartPage) await loadCart();
 
   updateCartCountBadge();
@@ -140,30 +133,15 @@ try {
 
 
 // ========== Products ==========
-async function loadProducts(page = 0) {
-  const query = searchInput?.value?.trim() || "";
-  const category = categorySelect?.value || "all";
-  const sort = sortSelect?.value || "";
-
-  let url = `/products?page=${page}&size=${pageSize}`;
-
-  if (category !== "all") url += `&category=${encodeURIComponent(category)}`;
-  if (query) url += `&search=${encodeURIComponent(query)}`;
-  if (sort) url += `&sort=${encodeURIComponent(sort)}`;
-
+async function loadProducts() {
   try {
-    const res = await fetch(url, {
+    const res = await fetch("/products", {
       headers: { ...authHeaders(), Accept: "application/json" },
     });
     if (!res.ok) throw new Error(await res.text());
-
-    const data = await res.json();
-    allProducts = data.content;
-    totalPages = data.totalPages;
-    currentPage = data.number;
-
-    displayProducts(allProducts); // ✅ no need to apply filters on frontend now
-    updatePaginationControls();
+    allProducts = await res.json();
+    await populateCategories(); // 🟡 Changed this line!
+    applyFilters();
   } catch (e) {
     console.error("❌ Error loading products:", e);
     productList.innerHTML = "<p>⚠️ Failed to load products.</p>";
@@ -171,68 +149,61 @@ async function loadProducts(page = 0) {
 }
 
 
-function updatePaginationControls() {
-  const info = document.getElementById("page-info");
-  const prev = document.getElementById("prev-page");
-  const next = document.getElementById("next-page");
+async function populateCategories() {
+  if (!categorySelect) return;
 
-  if (info) info.textContent = `Page ${currentPage + 1} of ${totalPages}`;
-  if (prev) prev.disabled = currentPage === 0;
-  if (next) next.disabled = currentPage >= totalPages - 1;
-}
-
-document.getElementById("prev-page")?.addEventListener("click", () => {
-  if (currentPage > 0) loadProducts(currentPage - 1);
-});
-
-document.getElementById("next-page")?.addEventListener("click", () => {
-  if (currentPage < totalPages - 1) loadProducts(currentPage + 1);
-});
-
-
-// ========== Load Categories from Backend ==========
-async function loadCategories() {
   try {
     const res = await fetch("/products/categories", {
-      headers: { ...authHeaders(), Accept: "application/json" },
+      headers: { ...authHeaders(), Accept: "application/json" }
     });
-    if (!res.ok) throw new Error("Failed to load categories");
+
+    if (!res.ok) throw new Error(await res.text());
     const categories = await res.json();
 
-    if (categorySelect) {
-      categorySelect.innerHTML = `<option value="all">📂 All Categories</option>`;
-      categories.forEach((cat) => {
-        const option = document.createElement("option");
-        option.value = cat.toLowerCase();
-        option.textContent = cat;
-        categorySelect.appendChild(option);
-      });
-
-      // Restore from localStorage
-      const savedCategory = localStorage.getItem("activeCategory");
-      if (savedCategory) {
-        categorySelect.value = savedCategory;
-        activeCategory = savedCategory;
-      }
-    }
+    categorySelect.innerHTML = `<option value="all">📂 All Categories</option>`;
+    categories.sort().forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat.toLowerCase();
+      option.textContent = `📁 ${cat}`;
+      categorySelect.appendChild(option);
+    });
   } catch (e) {
-    console.error("❌ Failed to load categories:", e);
+    console.error("❌ Error loading categories from server:", e);
   }
 }
 
 
 function applyFilters() {
-  localStorage.setItem("activeCategory", categorySelect?.value || "all");
-  loadProducts(0); // Always load page 0 when filter/search/sort changes
-}
+  if (!productList) return;
+  const query = searchInput?.value?.toLowerCase() || "";
+  const selectedCategory = categorySelect?.value || "all";
+  const selectedSort = sortSelect?.value || "";
 
+  let filtered = allProducts.filter((p) => {
+    const nameMatch = p.name.toLowerCase().includes(query);
+    const categoryMatch = selectedCategory === "all" || p.category?.toLowerCase() === selectedCategory;
+    return nameMatch && categoryMatch;
+  });
 
-function displayProducts(products) {
-  if (!productList) {
-    console.warn("⚠️ No #product-list element found.");
-    return;
+  switch (selectedSort) {
+    case "price-asc":
+      filtered.sort((a, b) => a.price - b.price);
+      break;
+    case "price-desc":
+      filtered.sort((a, b) => b.price - a.price);
+      break;
+    case "name-asc":
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "name-desc":
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+      break;
   }
 
+  displayProducts(filtered);
+}
+
+function displayProducts(products) {
   productList.innerHTML = "";
   if (products.length === 0) {
     productList.innerHTML = "<p>No products found.</p>";
@@ -244,8 +215,47 @@ function displayProducts(products) {
     card.className = "product-card";
     const img = p.imageUrl || "https://via.placeholder.com/200";
 
-    const disabled = p.quantity === 0;
-    const quantityInputId = `quantity-${p.id}`;
+    // Stock message
+    let stockMsg = "";
+    if (p.quantity <= 0) {
+      stockMsg = `<p style="color: gray;">Out of Stock</p>`;
+    } else if (p.quantity <= 5) {
+      stockMsg = `<p style="color: red;">Only ${p.quantity} left in stock!</p>`;
+    }
+
+    // Quantity input
+    const quantityInput = p.quantity > 0
+      ? `<label for="qty-${p.id}" style="font-size: 0.9rem;">Qty:</label>
+         <input type="number" id="qty-${p.id}" min="1" max="${p.quantity}" value="1" 
+                style="width: 100%; padding: 6px; font-size: 0.9rem; border-radius: 6px; border: 1px solid #ccc;" />`
+      : "";
+
+    // Add to Cart button
+    const addToCartBtn = `
+      <button
+        onclick="handleAddToCart(${p.id}); event.stopPropagation();"
+        ${p.quantity <= 0 ? "disabled class='out-of-stock-btn'" : ""}
+        style="padding: 8px; font-size: 0.95rem; border: none; border-radius: 6px; font-weight: 600;"
+      >
+        Add to Cart
+      </button>`;
+
+   const wishlistBtn = `
+  <div style="display: flex; justify-content: center; margin-top: 8px;">
+    <button onclick="toggleWishlist(${p.id}); event.stopPropagation();" 
+            class="wishlist-btn" 
+            style="
+              padding: 4px 8px;
+              font-size: 0.95rem;
+              border-radius: 8px;
+              background-color: #ffe0ec;
+              color: #ff3366;
+              border: none;
+              cursor: pointer;
+            ">
+      💖
+    </button>
+  </div>`;
 
     card.innerHTML = `
       <a href="/product.html?id=${p.id}" class="product-link">
@@ -253,22 +263,18 @@ function displayProducts(products) {
         <h3>${p.name}</h3>
         <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
         <p>₹${p.price.toFixed(2)}</p>
+        ${stockMsg}
       </a>
-
-      <div class="product-quantity-wrapper">
-        <label for="${quantityInputId}">Quantity:</label>
-        <input type="number" id="${quantityInputId}" class="quantity-input" min="1" max="${p.quantity}" value="1" ${disabled ? "disabled" : ""}>
-        <small class="stock-info">${p.quantity > 0 ? `🧾 ${p.quantity} left` : "❌ Out of stock"}</small>
-      </div>
-
-      <div class="product-actions">
-        <button ${disabled ? "disabled" : ""} onclick="handleAddToCart(${p.id}); event.stopPropagation();">Add to Cart</button>
-        <button onclick="toggleWishlist(${p.id}); event.stopPropagation();" class="wishlist-btn">💖</button>
+      <div class="product-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        ${quantityInput}
+        ${addToCartBtn}
+        ${wishlistBtn}
       </div>
     `;
     productList.appendChild(card);
   });
 }
+
 
 
 // ========== Cart ==========
@@ -279,28 +285,26 @@ async function handleAddToCart(productId) {
     window.location.href = "/login.html";
     return;
   }
-
-  const qtyInput = document.getElementById(`quantity-${productId}`);
-  let quantity = parseInt(qtyInput?.value || "1");
-
-  if (isNaN(quantity) || quantity < 1) quantity = 1;
-  if (qtyInput && quantity > parseInt(qtyInput.max)) {
-    showToast("⚠️ Not enough stock");
-    return;
-  }
-
-  await addToCart(productId, quantity);
+  await addToCart(productId);
 }
 
-
-async function addToCart(productId, quantity) {
+async function addToCart(productId) {
   try {
+    const qtyInput = document.getElementById(`qty-${productId}`);
+    const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
+
+    if (!quantity || quantity <= 0) {
+      showToast("⚠️ Please enter a valid quantity");
+      return;
+    }
+
     await fetch(`/cart/${cartId}/add?productId=${productId}&quantity=${quantity}`, {
       method: "POST",
       headers: authHeaders(),
     });
+
     if (isCartPage) await loadCart();
-    showToast("🛒 Added to cart");
+    showToast(`🛒 Added ${quantity} item(s) to cart`);
     updateCartCountBadge();
   } catch (e) {
     console.error("❌ Add to cart failed:", e);
@@ -427,13 +431,8 @@ if (isCartPage) {
 
 // ========== Event Listeners ==========
 searchInput?.addEventListener("input", applyFilters);
-categorySelect?.addEventListener("change", () => {
-  activeCategory = categorySelect.value;
-  localStorage.setItem("activeCategory", activeCategory);
-  applyFilters();
-});
+categorySelect?.addEventListener("change", applyFilters);
 sortSelect?.addEventListener("change", applyFilters);
-
 
 // ========== Start ==========
 window.addEventListener("DOMContentLoaded", () => {
@@ -453,6 +452,3 @@ function toggleWishlist(productId) {
   }
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
 }
-
-
-

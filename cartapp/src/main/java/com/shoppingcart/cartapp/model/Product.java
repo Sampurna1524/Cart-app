@@ -22,20 +22,13 @@ public class Product {
 
     @Builder.Default
     @Column(length = 512)
-    private String imageUrl = "/uploads/default.jpg";
+    private String imageUrl = "/uploads/default.jpg";  // ✅ Ensures default image
 
     @Builder.Default
     @Column(length = 100)
-    private String category = "General";
-
-    @Column(length = 1000)
-    private String description;
+    private String category = "General";  // ✅ Prevents null/empty category in frontend
 
     @Builder.Default
     @Column(nullable = false)
-    private int quantity = 0;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean visible = true;
+    private int quantity = 0; // ✅ New: product stock quantity (used for cart & restocking)
 }

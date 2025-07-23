@@ -75,13 +75,7 @@
     const container = document.getElementById("wishlist-container");
 
     function getWishlist() {
-      const data = localStorage.getItem("wishlist");
-      try {
-        const parsed = JSON.parse(data);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+      return JSON.parse(localStorage.getItem("wishlist") || "[]");
     }
 
     function showToast(msg) {
@@ -107,34 +101,11 @@
     }
 
     async function fetchAllProducts() {
-  let page = 0;
-  const size = 20;
-  let allProducts = [];
-  let hasNextPage = true;
-
-  const token = sessionStorage.getItem("jwt");
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-  while (hasNextPage) {
-    const res = await fetch(`/products?page=${page}&size=${size}`, { headers });
-
-    if (!res.ok) break;
-
-    const data = await res.json();
-    const pageProducts = Array.isArray(data) ? data : data.content || [];
-
-    allProducts = allProducts.concat(pageProducts);
-
-    if (data.last || pageProducts.length === 0) {
-      hasNextPage = false;
-    } else {
-      page++;
+      const res = await fetch("/products", {
+        headers: authHeaders()
+      });
+      return await res.json();
     }
-  }
-
-  return allProducts;
-}
-
 
     async function loadWishlist() {
       const token = sessionStorage.getItem("jwt");
@@ -144,40 +115,29 @@
         return;
       }
 
-      container.innerHTML = "<p>Loading wishlist...</p>";
-
+      container.innerHTML = "";
       const wishlist = getWishlist();
-      if (wishlist.length === 0) {
-        container.innerHTML = "<p>💔 No products in your wishlist.</p>";
+      const products = await fetchAllProducts();
+      const matched = products.filter(p => wishlist.includes(p.id));
+
+      if (matched.length === 0) {
+        container.innerHTML = "<p>No products in your wishlist.</p>";
         return;
       }
 
-      try {
-        const allProducts = await fetchAllProducts();
-        const matched = allProducts.filter(p => wishlist.includes(p.id));
-
-        if (matched.length === 0) {
-          container.innerHTML = "<p>💔 No matching products found in wishlist.</p>";
-          return;
-        }
-
-        container.innerHTML = "";
-        matched.forEach(p => {
-          const card = document.createElement("div");
-          card.className = "product-card";
-          card.innerHTML = `
-            <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
-            <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
-            <h3>${p.name}</h3>
-            <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
-            <p>₹${p.price.toFixed(2)}</p>
-            <button onclick="addToCart(${p.id})">Add to Cart</button>
-          `;
-          container.appendChild(card);
-        });
-      } catch (e) {
-        container.innerHTML = "<p>❌ Failed to load wishlist products.</p>";
-      }
+      matched.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "product-card";
+        card.innerHTML = `
+          <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
+          <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
+          <h3>${p.name}</h3>
+          <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
+          <p>₹${p.price.toFixed(2)}</p>
+          <button onclick="addToCart(${p.id})">Add to Cart</button>
+        `;
+        container.appendChild(card);
+      });
     }
 
     function authHeaders() {

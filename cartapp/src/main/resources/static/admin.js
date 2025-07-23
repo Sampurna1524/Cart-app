@@ -4,13 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const nameInput = document.querySelector('input[name="name"]');
   const categoryInput = document.querySelector('input[name="category"]');
   const priceInput = document.querySelector('input[name="price"]');
-  const quantityInput = document.querySelector('input[name="quantity"]'); // ✅ NEW
+  const quantityInput = document.querySelector('input[name="quantity"]'); // ✅ NEW: for stock
   const imageInput = document.getElementById("product-image");
   const imagePreview = document.getElementById("image-preview");
-  const toggleArchivedBtn = document.getElementById("toggle-archived");
 
   const token = sessionStorage.getItem("jwt");
-  let isArchivedMode = false;
 
   function authHeaders() {
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -26,41 +24,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadProducts() {
-    const url = isArchivedMode ? "/products/archived" : "/products";
     try {
-      const res = await fetch(url, { headers: authHeaders() });
-      const data = await res.json();
-      const products = Array.isArray(data) ? data : data.content;
+      const res = await fetch("/products");
+      const products = await res.json();
 
       productList.innerHTML = "";
       products.sort((a, b) => a.name.localeCompare(b.name));
 
       products.forEach(product => {
-        const isArchived = !product.visible;
+        const isLow = product.quantity <= 5;
+        const isOut = product.quantity <= 0;
+
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
-          ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.name}" class="product-image"/>` : ''}
-          <div class="product-content">
-            <h3>${product.name}</h3>
-            <p>₹${product.price.toFixed(2)}</p>
-            <p>📦 ${product.category || "Uncategorized"}</p>
-            <p>🧮 Quantity: ${product.quantity}</p>
+  ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.name}" class="product-image"/>` : ''}
+  <div class="product-content">
+    <h3>${product.name}</h3>
+    <p>₹${product.price.toFixed(2)}</p>
+    <p style="font-size: 0.9rem; color: #666;">📦 ${product.category || "Uncategorized"}</p>
+    <p style="font-weight: bold; color: ${isOut ? 'gray' : isLow ? 'red' : 'green'};">
+      ${isOut ? 'Out of Stock' : `Stock: ${product.quantity}`}
+    </p>
+    <button onclick="restockProduct(${product.id})" class="btn">➕ Restock</button>
+    <button onclick="deleteProduct(${product.id})" class="btn danger">❌ Delete</button>
+  </div>
+`;
 
-            ${
-              isArchived
-                ? `<button onclick="unarchiveProduct(${product.id})" class="btn primary">♻️ Unarchive</button>`
-                : `<button onclick="archiveProduct(${product.id})" class="btn primary">📥 Archive</button>`
-            }
-
-            <div style="margin: 8px 0;">
-              <input type="number" id="restock-${product.id}" min="1" placeholder="Restock amount" style="padding:6px; width: 65%; margin-bottom: 6px;" />
-              <button onclick="restockProduct(${product.id})" class="btn primary">➕ Restock</button>
-            </div>
-
-            <button onclick="deleteProduct(${product.id})" class="btn danger">❌ Delete</button>
-          </div>
-        `;
         productList.appendChild(card);
       });
     } catch (err) {
@@ -68,12 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("⚠️ Failed to load products");
     }
   }
-
-  toggleArchivedBtn?.addEventListener("click", () => {
-    isArchivedMode = !isArchivedMode;
-    toggleArchivedBtn.textContent = isArchivedMode ? "📦 Show Active" : "📦 Show Archived";
-    loadProducts();
-  });
 
   imageInput.addEventListener("change", () => {
     const file = imageInput.files[0];
@@ -96,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = nameInput.value.trim();
     const category = categoryInput.value.trim();
     const price = parseFloat(priceInput.value);
-    const quantity = parseInt(quantityInput.value); // ✅ NEW
+    const quantity = parseInt(quantityInput.value); // ✅ NEW: quantity
     const file = imageInput.files[0];
 
     if (!name || !category || isNaN(price) || isNaN(quantity)) {
@@ -130,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    const productData = { name, category, price, quantity, imageUrl }; // ✅ quantity included
+    const productData = { name, category, price, quantity, imageUrl };
 
     try {
       const res = await fetch("/products", {
@@ -149,11 +133,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       showToast("✅ Product added");
 
-      // Reset form
       nameInput.value = "";
       categoryInput.value = "";
       priceInput.value = "";
-      quantityInput.value = ""; // ✅ Reset quantity
+      quantityInput.value = "";
       imageInput.value = "";
       imagePreview.src = "";
       imagePreview.style.display = "none";
@@ -186,67 +169,44 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("⚠️ Error deleting product.");
     }
   };
+    window.restockProduct = async function (productId) {
+    const amount = prompt("Enter quantity to add:");
 
-  window.archiveProduct = async function (id) {
-    try {
-      const res = await fetch(`/products/${id}/archive`, {
-        method: "PUT",
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        showToast("📥 Product archived");
-        await loadProducts();
-      } else {
-        showToast("❌ Failed to archive");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("⚠️ Error archiving product");
-    }
-  };
-
-  window.unarchiveProduct = async function (id) {
-    try {
-      const res = await fetch(`/products/${id}/unarchive`, {
-        method: "PUT",
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        showToast("♻️ Product unarchived");
-        await loadProducts();
-      } else {
-        showToast("❌ Failed to unarchive");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("⚠️ Error unarchiving product");
-    }
-  };
-
-  window.restockProduct = async function (id) {
-    const input = document.getElementById(`restock-${id}`);
-    const amount = parseInt(input.value);
-    if (!amount || amount <= 0) {
-      showToast("⚠️ Enter valid restock amount");
+    if (!amount || isNaN(amount) || parseInt(amount) <= 0) {
+      showToast("⚠️ Invalid restock quantity.");
       return;
     }
 
     try {
-      const res = await fetch(`/products/${id}/restock?amount=${amount}`, {
-        method: "PUT",
-        headers: authHeaders(),
+      const res = await fetch(`/products/${productId}/restock?quantityToAdd=${parseInt(amount)}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders(),
+        }
       });
-      if (res.ok) {
-        showToast(`➕ Restocked by ${amount}`);
-        await loadProducts();
-      } else {
-        showToast("❌ Failed to restock");
+
+      if (res.status === 403) {
+        console.error("🔒 403 Forbidden - likely missing or invalid JWT token.");
+        showToast("❌ Unauthorized. Please login again.");
+        return;
       }
+
+      if (!res.ok) {
+        const errorMsg = await res.text();
+        console.error("❌ Failed to restock:", errorMsg);
+        showToast("❌ Failed to restock product.");
+        return;
+      }
+
+      showToast("✅ Product restocked!");
+      await loadProducts();
     } catch (err) {
-      console.error(err);
-      showToast("⚠️ Error restocking product");
+      console.error("⚠️ Restock error:", err);
+      showToast("⚠️ Error restocking product.");
     }
   };
+
+
 
   loadProducts();
 });

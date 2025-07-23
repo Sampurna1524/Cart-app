@@ -313,25 +313,12 @@ body.dark .dropdown-menu li a {
         transform: translateY(20px);
       }
     }
-
-    .pagination button {
-  padding: 8px 14px;
-  margin: 0 6px;
-  background: #007bff;
+    button.btn.danger {
+  background: #e53935;
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
 }
-
-.pagination button:hover {
-  background-color: #0056b3;
-}
-
-.pagination span {
-  font-size: 1rem;
-  font-weight: bold;
+button.btn.danger:hover {
+  background: #c62828;
 }
 
   </style>
@@ -370,26 +357,21 @@ body.dark .dropdown-menu li a {
     <section class="animate-slide-up">
       <h2>➕ Add New Product</h2>
       <form id="upload-form" enctype="multipart/form-data" autocomplete="off">
-  <input type="text" name="name" placeholder="Product Name" required />
-  <input type="text" name="category" placeholder="Category (e.g., Electronics, Fashion)" required />
-  <input type="number" name="price" placeholder="Price" step="0.01" required />
-  <input type="number" name="quantity" placeholder="Quantity in stock" min="0" required />
-  <input type="file" name="image" id="product-image" accept="image/*" required />
-  <img id="image-preview" alt="Image Preview" />
-  <button type="submit" class="btn primary">➕ Add Product</button>
-</form>
+        <input type="text" name="name" placeholder="Product Name" required />
+        <input type="text" name="category" placeholder="Category (e.g., Electronics, Fashion)" required />
+<input type="number" name="price" placeholder="Price" step="0.01" required />
+<input type="number" name="quantity" placeholder="Quantity (e.g., 10)" required min="0" />
 
+        <input type="file" name="image" id="product-image" accept="image/*" required />
+        <img id="image-preview" alt="Image Preview" />
+        <button type="submit" class="btn primary">➕ Add Product</button>
+      </form>
     </section>
 
     <!-- 📦 Product List -->
     <section class="animate-slide-up">
       <h2>📦 Product List</h2>
       <div id="admin-product-list" class="product-grid"></div>
-      <div id="pagination-container" style="text-align: center; margin-top: 1rem;"></div>
-      <div style="margin-bottom: 1rem;">
-  <button id="toggle-archived" class="btn primary">📦 Show Archived</button>
-</div>
-
     </section>
   </main>
 
@@ -400,195 +382,224 @@ body.dark .dropdown-menu li a {
   <div id="toast-container"></div>
 
   <script>
-  const form = document.getElementById("upload-form");
-  const productList = document.getElementById("admin-product-list");
-  const token = sessionStorage.getItem("jwt");
-
-  let currentPage = 0;
-  let totalPages = 1;
-
-  function showToast(msg) {
-    const c = document.getElementById("toast-container");
-    const toast = document.createElement("div");
-    toast.className = "toast";
-    toast.innerText = msg;
-    c.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-  }
-
-  let isArchivedMode = false;
-
-async function fetchProducts(page = 0, archived = false) {
-  isArchivedMode = archived;
-
-  const url = archived
-    ? `/products/archived`
-    : `/products?page=${page}&size=6`;
-
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await res.json();
-    const products = archived ? data : data.content || [];
-
-    currentPage = archived ? 0 : data.number;
-    totalPages = archived ? 1 : data.totalPages;
-
-    renderProducts(products);
-    renderPagination();
-  } catch (err) {
-    console.error("Error loading products", err);
-    showToast("⚠️ Failed to load products");
-  }
-}
-
-  function renderProducts(products) {
-  productList.innerHTML = "";
-  products.forEach((p) => {
-    const card = document.createElement("div");
-    card.className = "product-card";
-    const isArchived = !p.visible;
-
-    card.innerHTML = `
-      <img src="${p.imageUrl || 'https://via.placeholder.com/300'}" alt="${p.name}" />
-      <div class="product-content">
-        <h3>${p.name}</h3>
-        <p>Category: ${p.category}</p>
-        <p>₹${p.price.toFixed(2)}</p>
-        <p>Quantity: ${p.quantity}</p>
-
-        ${
-          isArchived
-            ? `<button onclick="unarchiveProduct(${p.id})" class="btn primary">♻️ Unarchive</button>`
-            : `<button onclick="archiveProduct(${p.id})" class="btn primary">📥 Archive</button>`
-        }
-
-        <div style="margin: 8px 0;">
-          <input type="number" id="restock-${p.id}" min="1" placeholder="Restock amount" style="padding:6px; width: 60%; margin-bottom: 5px;" />
-          <button onclick="restockProduct(${p.id})" class="btn primary">➕ Restock</button>
-        </div>
-
-        <button onclick="deleteProduct(${p.id})" class="btn danger">🗑️ Delete</button>
-      </div>
-    `;
-    productList.appendChild(card);
-  });
-}
-
-
-  function renderPagination() {
-    let paginationHTML = "";
-
-    if (totalPages > 1) {
-      paginationHTML += `<div class="pagination">`;
-
-      if (currentPage > 0) {
-        paginationHTML += `<button onclick="fetchProducts(${currentPage - 1})">⬅️ Prev</button>`;
-      }
-
-      paginationHTML += `<span> Page ${currentPage + 1} of ${totalPages} </span>`;
-
-      if (currentPage < totalPages - 1) {
-        paginationHTML += `<button onclick="fetchProducts(${currentPage + 1})">Next ➡️</button>`;
-      }
-
-      paginationHTML += `</div>`;
+    // Dark Mode Toggle
+    const toggleBtn = document.getElementById("dark-toggle");
+    toggleBtn.onclick = () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    };
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
     }
 
-    const paginationContainer = document.getElementById("pagination-container");
-    paginationContainer.innerHTML = paginationHTML;
+    // Image preview
+    const imageInput = document.getElementById('product-image');
+    const preview = document.getElementById('image-preview');
+    imageInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          preview.src = reader.result;
+          preview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.src = "";
+        preview.style.display = "none";
+      }
+    });
+
+    const form = document.getElementById("upload-form");
+    const productList = document.getElementById("admin-product-list");
+    const token = sessionStorage.getItem("jwt");
+
+    function showToast(msg) {
+      const c = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerText = msg;
+      c.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    async function fetchProducts() {
+      try {
+        const res = await fetch("/products");
+        const data = await res.json();
+        renderProducts(data);
+      } catch (err) {
+        console.error("Error loading products", err);
+        showToast("⚠️ Failed to load products");
+      }
+    }
+
+    function renderProducts(products) {
+      productList.innerHTML = "";
+      products.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "product-card";
+        card.innerHTML = `
+          <img src="${p.imageUrl || 'https://via.placeholder.com/300'}" alt="${p.name}" />
+          <div class="product-content">
+            <h3>${p.name}</h3>
+            <p>Category: ${p.category}</p>
+           <p>₹${p.price.toFixed(2)}</p>
+<p style="font-weight: bold; color: ${
+  !p.quantity ? 'gray' : p.quantity <= 5 ? 'red' : 'green'
+}">
+  ${
+    !p.quantity
+      ? 'Out of Stock'
+      : p.quantity <= 5
+      ? `⚠️ Low Stock: ${p.quantity}`
+      : `Stock: ${p.quantity}`
   }
+</p>
 
-  async function deleteProduct(productId) {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+            <button onclick="deleteProduct(${p.id})" class="btn danger">🗑️ Delete</button>
+<button onclick="restockProduct(${p.id})" class="btn primary">🔄 Restock</button>
 
+
+          </div>
+        `;
+        productList.appendChild(card);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const token = sessionStorage.getItem("jwt");
+    const name = form.name.value;
+    const category = form.category.value;
+    const price = parseFloat(form.price.value);
+    const file = imageInput.files[0];
+
+    if (!token || !file) {
+      showToast("⚠️ Missing token or file");
+      return;
+    }
+
+    // Step 1: Upload image
+    const imageFormData = new FormData();
+    imageFormData.append("file", file);
+
+    let imageUrl;
     try {
-      const res = await fetch(`/products/${productId}`, {
-        method: "DELETE",
+      const uploadRes = await fetch("/products/upload", {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        body: imageFormData,
       });
 
-      if (res.ok) {
-        showToast("🗑️ Product deleted");
-        await fetchProducts(currentPage); // Reload current page
-      } else {
-        showToast("❌ Failed to delete");
+      if (!uploadRes.ok) {
+        throw new Error("Upload failed");
       }
+
+      imageUrl = await uploadRes.text(); // backend returns plain string
     } catch (err) {
-      console.error("Delete failed", err);
-      showToast("⚠️ Error deleting");
+      console.error("❌ Image upload error:", err);
+      showToast("❌ Image upload failed");
+      return;
     }
-  }
-async function archiveProduct(id) {
-  try {
-    const res = await fetch(`/products/${id}/archive`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      showToast("📥 Product archived");
-      await fetchProducts(currentPage);
-    } else {
-      showToast("❌ Failed to archive");
-    }
-  } catch (err) {
-    showToast("⚠️ Error archiving");
-  }
-}
 
-async function unarchiveProduct(id) {
-  try {
-    const res = await fetch(`/products/${id}/unarchive`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      showToast("♻️ Product unarchived");
-      await fetchProducts(currentPage, true);
-    } else {
-      showToast("❌ Failed to unarchive");
-    }
-  } catch (err) {
-    showToast("⚠️ Error unarchiving");
-  }
-}
+    // Step 2: Create product
+    const quantity = parseInt(form.quantity.value) || 0;
 
-async function restockProduct(id) {
-  const amount = parseInt(document.getElementById(`restock-${id}`).value);
-  if (!amount || amount <= 0) {
-    showToast("⚠️ Enter valid amount");
+const productData = {
+  name,
+  category,
+  price,
+  quantity,
+  imageUrl,
+};
+
+
+    try {
+      const productRes = await fetch("/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!productRes.ok) {
+        throw new Error("Product creation failed");
+      }
+
+      showToast("✅ Product added successfully");
+      form.reset();
+      preview.style.display = "none";
+      await fetchProducts();
+    } catch (err) {
+      console.error("❌ Product creation error:", err);
+      showToast("❌ Failed to create product");
+    }
+  });
+    async function deleteProduct(productId) {
+      if (!confirm("Are you sure you want to delete this product?")) return;
+
+      try {
+        const res = await fetch(`/products/${productId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          showToast("🗑️ Product deleted");
+          await fetchProducts();
+        } else {
+          showToast("❌ Failed to delete");
+        }
+      } catch (err) {
+        console.error("Delete failed", err);
+        showToast("⚠️ Error deleting");
+      }
+    }
+async function restockProduct(productId) {
+  const token = sessionStorage.getItem("jwt");
+  const quantityToAdd = prompt("Enter quantity to restock:");
+  const amount = parseInt(quantityToAdd);
+
+  if (isNaN(amount) || amount <= 0) {
+    showToast("⚠️ Invalid restock quantity");
     return;
   }
 
   try {
-    const res = await fetch(`/products/${id}/restock?amount=${amount}`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`/products/${productId}/restock`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ amount }),
     });
+
     if (res.ok) {
-      showToast(`➕ Restocked by ${amount}`);
-      await fetchProducts(currentPage, isArchivedMode);
+      showToast("✅ Product restocked");
+      await fetchProducts();
     } else {
-      showToast("❌ Failed to restock");
+      const errorText = await res.text();
+      console.error("❌ Restock error:", errorText);
+      showToast("❌ Failed to restock product");
     }
   } catch (err) {
-    showToast("⚠️ Error restocking");
+    console.error("Restock failed", err);
+    showToast("⚠️ Error during restock");
   }
 }
-document.getElementById("toggle-archived").addEventListener("click", () => {
-  const archived = !isArchivedMode;
-  document.getElementById("toggle-archived").textContent = archived ? "📦 Show Active" : "📦 Show Archived";
-  fetchProducts(0, archived);
-});
 
-  // Load products on page load
-  window.addEventListener("DOMContentLoaded", () => fetchProducts());
-</script>
 
+    window.addEventListener("DOMContentLoaded", fetchProducts);
+  </script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     const profileBtn = document.getElementById("profile-btn");

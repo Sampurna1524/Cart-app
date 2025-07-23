@@ -4,23 +4,25 @@ import com.shoppingcart.cartapp.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // ✅ Visible only products (default view)
-    Page<Product> findByVisibleTrue(Pageable pageable);
+    // ✅ For pagination without filters
+    Page<Product> findAll(Pageable pageable);
 
-    // ✅ Visible only by category
-    Page<Product> findByCategoryIgnoreCaseAndVisibleTrue(String category, Pageable pageable);
+    // ✅ For pagination with category filter
+    Page<Product> findByCategoryIgnoreCase(String category, Pageable pageable);
 
-    // ✅ Visible only by name search
-    Page<Product> findByNameContainingIgnoreCaseAndVisibleTrue(String name, Pageable pageable);
+    // ✅ For pagination with name search
+    Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-    // ✅ Visible only by category AND name
-    Page<Product> findByCategoryIgnoreCaseAndNameContainingIgnoreCaseAndVisibleTrue(String category, String name, Pageable pageable);
+    // ✅ For pagination with both filters
+    Page<Product> findByCategoryIgnoreCaseAndNameContainingIgnoreCase(String category, String name, Pageable pageable);
 
-    // ✅ Archived products (admin only)
-    List<Product> findByVisibleFalse();
+    // ✅ Get all categories
+    @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL")
+    List<String> findDistinctCategories();
 }

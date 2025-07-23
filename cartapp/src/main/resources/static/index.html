@@ -131,65 +131,56 @@
       padding: 12px;
     }
   }
-
-  .pagination-controls {
+  .quantity-row {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 6px;
+  margin: 10px 0;
+}
+.quantity-row input[type="number"] {
+  width: 60px;
+  padding: 4px 6px;
 }
 
-.pagination-controls button {
-  padding: 10px 16px;
-  font-size: 1rem;
+.product-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.product-actions input[type="number"] {
+  width: 100%;
+  padding: 6px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.product-actions button {
+  padding: 8px;
+  font-size: 0.95rem;
   border: none;
-  background-color: #4caf50;
-  color: white;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  font-weight: 600;
+  transition: background 0.3s;
 }
 
-.pagination-controls button:disabled {
-  background-color: #aaa;
+.product-actions button:disabled {
+  background-color: #ccc !important;
+  cursor: not-allowed;
+  color: #555;
+}
+.out-of-stock-btn {
+  background-color: #bbb !important;
+  color: #fff;
   cursor: not-allowed;
 }
 
-body.dark .pagination-controls button {
-  background-color: #2e7d32;
-}
 
-.pagination-controls span {
-  font-size: 1.1rem;
-  font-weight: bold;
-}
 
-.quantity-input {
-  width: 60px;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  text-align: center;
-}
-
-.product-quantity-wrapper {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.stock-info {
-  font-size: 0.9rem;
-  color: #555;
-}
-
-body.dark .stock-info {
-  color: #ccc;
-}
 
    </style>
 </head>
@@ -232,35 +223,27 @@ body.dark .stock-info {
 
   <!-- 🧺 Product Browsing Section -->
   <main class="container animate-slide-up">
-  <section id="products-section" class="glass section">
-    <div class="section-header">
-      <h2>🧺 Browse Products</h2>
-      <div class="filters">
-        <input type="text" id="search-input" placeholder="🔍 Search products..." />
-        <select id="category-select">
-          <option value="all">📂 All Categories</option>
-        </select>
-        <select id="sort-select">
-          <option value="">🔽 Sort by</option>
-          <option value="price-asc">💸 Price: Low to High</option>
-          <option value="price-desc">💰 Price: High to Low</option>
-          <option value="name-asc">🔤 Name: A-Z</option>
-          <option value="name-desc">🔡 Name: Z-A</option>
-        </select>
+    <section id="products-section" class="glass section">
+      <div class="section-header">
+        <h2>🧺 Browse Products</h2>
+        <div class="filters">
+          <input type="text" id="search-input" placeholder="🔍 Search products..." />
+          <select id="category-select">
+            <option value="all">📂 All Categories</option>
+          </select>
+          <select id="sort-select">
+            <option value="">🔽 Sort by</option>
+            <option value="price-asc">💸 Price: Low to High</option>
+            <option value="price-desc">💰 Price: High to Low</option>
+            <option value="name-asc">🔤 Name: A-Z</option>
+            <option value="name-desc">🔡 Name: Z-A</option>
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div id="product-list" class="grid"></div>
-
-    <!-- Pagination Controls -->
-    <div id="pagination-controls" style="display: flex; justify-content: center; margin-top: 20px; gap: 10px;">
-      <button id="prev-page" disabled>⬅️ Previous</button>
-      <span id="page-info">Page 1</span>
-      <button id="next-page">Next ➡️</button>
-    </div>
-  </section>
-</main>
-
+      <div id="product-list" class="grid"></div>
+    </section>
+  </main>
 
   <div id="toast-container"></div>
 
@@ -273,32 +256,44 @@ body.dark .stock-info {
 
   <!-- Scripts -->
 <!-- Scripts -->
-<script src="/app.js" defer></script>
-
-<script defer>
+<script src="/app.js"></script>
+<script>
+  
   document.addEventListener("DOMContentLoaded", () => {
-    const profileBtn = document.getElementById("profile-btn");
-    const dropdownMenu = document.getElementById("dropdown-menu");
+  const profileBtn = document.getElementById("profile-btn");
+  const dropdownMenu = document.getElementById("dropdown-menu");
 
-    profileBtn?.addEventListener("click", (e) => {
-      e.stopPropagation(); // prevent body click from immediately closing it
-      dropdownMenu?.classList.toggle("show");
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!dropdownMenu?.contains(e.target) && !profileBtn?.contains(e.target)) {
-        dropdownMenu?.classList.remove("show");
-      }
-    });
-
-    // ✅ Logout functionality
-    document.getElementById("logout-btn")?.addEventListener("click", function (e) {
-      e.preventDefault();
-      sessionStorage.clear();
-      alert("Logged out!");
-      window.location.href = "/login.html";
-    });
+  profileBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdownMenu?.classList.toggle("show");
   });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdownMenu?.contains(e.target) && !profileBtn?.contains(e.target)) {
+      dropdownMenu?.classList.remove("show");
+    }
+  });
+
+  document.getElementById("logout-btn")?.addEventListener("click", function (e) {
+    e.preventDefault();
+    sessionStorage.clear();
+    alert("Logged out!");
+    window.location.href = "/login.html";
+  });
+
+});
+
+  
+
+// 🔹 Filter products by selected category
+categorySelect.addEventListener("change", () => {
+  const selected = categorySelect.value;
+  const filtered = selected === "all"
+    ? allProductsCache
+    : allProductsCache.filter(p => p.category === selected);
+  displayProducts(filtered);
+});
+
 </script>
 
 </body>
