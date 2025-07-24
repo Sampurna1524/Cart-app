@@ -4,14 +4,16 @@ import com.shoppingcart.cartapp.dto.RestockRequest;
 import com.shoppingcart.cartapp.model.Product;
 import com.shoppingcart.cartapp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import java.util.stream.Collectors;
-
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/products")
@@ -21,10 +23,14 @@ public class ProductController {
     @Autowired
     private ProductRepository productRepository;
 
-    // ✅ Get all products
+    // ✅ Get all products with pagination
     @GetMapping(produces = "application/json")
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public Page<Product> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return productRepository.findAll(pageable);
     }
 
     // ✅ Get product by ID
@@ -44,11 +50,11 @@ public class ProductController {
         }
 
         if (product.getImageUrl() == null || product.getImageUrl().isBlank()) {
-            product.setImageUrl("/uploads/default.jpg"); // fallback image
+            product.setImageUrl("/uploads/default.jpg");
         }
 
         if (product.getQuantity() < 0) {
-            product.setQuantity(0); // default safeguard
+            product.setQuantity(0);
         }
 
         Product saved = productRepository.save(product);
@@ -86,15 +92,14 @@ public class ProductController {
     }
 
     // ✅ Get all unique product categories
-@GetMapping("/categories")
-public ResponseEntity<List<String>> getAllCategories() {
-    List<String> categories = productRepository.findDistinctCategories()
-            .stream()
-            .filter(c -> c != null && !c.trim().isEmpty())
-            .sorted()
-            .collect(Collectors.toList());
+    @GetMapping("/categories")
+    public ResponseEntity<List<String>> getAllCategories() {
+        List<String> categories = productRepository.findDistinctCategories()
+                .stream()
+                .filter(c -> c != null && !c.trim().isEmpty())
+                .sorted()
+                .collect(Collectors.toList());
 
-    return ResponseEntity.ok(categories);
-}
-
+        return ResponseEntity.ok(categories);
+    }
 }

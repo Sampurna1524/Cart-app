@@ -9,6 +9,9 @@ const clearCartBtn = document.getElementById("clear-cart-btn");
 
 let cartId = null;
 let allProducts = [];
+let currentPage = 0;
+const pageSize = 8; // Change as needed
+
 
 const isCartPage = cartItems && cartTotal;
 
@@ -125,7 +128,8 @@ try {
     return;
   }
 
-  if (typeof loadProducts === "function") await loadProducts();
+  if (typeof loadProducts === "function") await loadProducts(0);
+
   if (isCartPage) await loadCart();
 
   updateCartCountBadge();
@@ -133,20 +137,26 @@ try {
 
 
 // ========== Products ==========
-async function loadProducts() {
+async function loadProducts(page = 0) {
+  currentPage = page;
   try {
-    const res = await fetch("/products", {
+    const res = await fetch(`/products?page=${page}&size=${pageSize}`, {
       headers: { ...authHeaders(), Accept: "application/json" },
     });
+
     if (!res.ok) throw new Error(await res.text());
-    allProducts = await res.json();
-    await populateCategories(); // 🟡 Changed this line!
-    applyFilters();
+    const pageData = await res.json();
+    allProducts = pageData.content;
+
+    await populateCategories();
+    applyFilters(); // This renders filtered products
+    renderPaginationControls(pageData.totalPages, page);
   } catch (e) {
     console.error("❌ Error loading products:", e);
     productList.innerHTML = "<p>⚠️ Failed to load products.</p>";
   }
 }
+
 
 
 async function populateCategories() {
@@ -275,6 +285,23 @@ function displayProducts(products) {
   });
 }
 
+function renderPaginationControls(totalPages, currentPage) {
+  const container = document.getElementById("pagination-controls");
+  container.innerHTML = "";
+
+  for (let i = 0; i < totalPages; i++) {
+    const btn = document.createElement("button");
+    btn.innerText = i + 1;
+    btn.style.padding = "8px 12px";
+    btn.style.borderRadius = "8px";
+    btn.style.border = "none";
+    btn.style.cursor = "pointer";
+    btn.style.background = i === currentPage ? "#333" : "#eee";
+    btn.style.color = i === currentPage ? "#fff" : "#333";
+    btn.onclick = () => loadProducts(i);
+    container.appendChild(btn);
+  }
+}
 
 
 // ========== Cart ==========
