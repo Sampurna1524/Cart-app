@@ -321,6 +321,60 @@ button.btn.danger:hover {
   background: #c62828;
 }
 
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 15px;
+}
+
+.admin-product-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px;
+  width: 220px;
+  background-color: #f9f9f9;
+  display: inline-block;
+  vertical-align: top;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.admin-product-card img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.admin-product-card h3 {
+  font-size: 16px;
+  margin: 8px 0;
+}
+
+.admin-product-card p {
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.admin-product-card button {
+  margin: 6px 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+}
+
+.admin-product-card button:hover {
+  background-color: #0056b3;
+}
+
   </style>
 </head>
 
@@ -351,6 +405,7 @@ button.btn.danger:hover {
     <h1>🛠️ SmartCart Admin</h1>
     <p class="subtitle">Manage your products with ease</p>
   </header>
+  
 
   <main class="container">
     <!-- ➕ Add Product Form -->
@@ -371,8 +426,20 @@ button.btn.danger:hover {
     <!-- 📦 Product List -->
     <section class="animate-slide-up">
       <h2>📦 Product List</h2>
-      <div id="admin-product-list" class="product-grid"></div>
+      <!-- Product List -->
+<div id="product-list" class="product-list"></div>
+
+<!-- Pagination Controls BELOW -->
+<div id="pagination-controls" class="pagination-controls">
+  <button id="prev-page">⬅️ Previous</button>
+  <span id="page-info">Page 1</span>
+  <button id="next-page">Next ➡️</button>
+</div>
+
     </section>
+
+</div>
+
   </main>
 
   <footer class="footer">
@@ -423,49 +490,76 @@ button.btn.danger:hover {
       setTimeout(() => toast.remove(), 2500);
     }
 
-    async function fetchProducts() {
-      try {
-        const res = await fetch("/products");
-        const data = await res.json();
-        renderProducts(data);
-      } catch (err) {
-        console.error("Error loading products", err);
-        showToast("⚠️ Failed to load products");
-      }
+   let currentPage = 0;
+let totalPages = 1;
+
+async function fetchProducts(page = 0) {
+  try {
+    const response = await fetch(`/products?page=${page}&size=8`);
+    const data = await response.json();
+
+    if (!data.content || !Array.isArray(data.content)) {
+      throw new Error("Invalid response format");
     }
 
-    function renderProducts(products) {
-      productList.innerHTML = "";
-      products.forEach((p) => {
-        const card = document.createElement("div");
-        card.className = "product-card";
-        card.innerHTML = `
-          <img src="${p.imageUrl || 'https://via.placeholder.com/300'}" alt="${p.name}" />
-          <div class="product-content">
-            <h3>${p.name}</h3>
-            <p>Category: ${p.category}</p>
-           <p>₹${p.price.toFixed(2)}</p>
-<p style="font-weight: bold; color: ${
-  !p.quantity ? 'gray' : p.quantity <= 5 ? 'red' : 'green'
-}">
-  ${
-    !p.quantity
-      ? 'Out of Stock'
-      : p.quantity <= 5
-      ? `⚠️ Low Stock: ${p.quantity}`
-      : `Stock: ${p.quantity}`
+    renderProducts(data.content);
+    currentPage = data.number;
+    totalPages = data.totalPages;
+
+    updatePagination();
+  } catch (error) {
+    console.error("⚠️ Failed to load products", error);
+    document.getElementById("product-list").innerHTML =
+      "<p style='color: red;'>⚠️ Failed to load products</p>";
   }
-</p>
+}
 
-            <button onclick="deleteProduct(${p.id})" class="btn danger">🗑️ Delete</button>
-<button onclick="restockProduct(${p.id})" class="btn primary">🔄 Restock</button>
+function renderProducts(products) {
+  const productList = document.getElementById("product-list");
+  productList.innerHTML = "";
+
+  products.forEach((product) => {
+    const productCard = document.createElement("div");
+    productCard.className = "product-card";
+
+    const imageUrl = `/uploads/${product.imageUrl}`; // ✅ fix here
+
+    productCard.innerHTML = `
+  <img src="${encodeURI(product.imageUrl)}" alt="${product.name}" />
+
+  <h3>${product.name}</h3>
+  <p>₹${product.price}</p>
+  <p>Stock: ${product.quantity}</p>
+  <button class="delete-btn" onclick="deleteProduct(${product.id})">Delete</button>
+  <button class="restock-btn" onclick="restockProduct(${product.id})">Restock</button>
+`;
 
 
-          </div>
-        `;
-        productList.appendChild(card);
-      });
-    }
+    productList.appendChild(productCard);
+  });
+}
+
+
+
+function updatePagination() {
+  document.getElementById("page-info").textContent = `Page ${currentPage + 1} of ${totalPages}`;
+  document.getElementById("prev-page").disabled = currentPage === 0;
+  document.getElementById("next-page").disabled = currentPage >= totalPages - 1;
+}
+
+document.getElementById("prev-page").addEventListener("click", () => {
+  if (currentPage > 0) fetchProducts(currentPage - 1);
+});
+
+document.getElementById("next-page").addEventListener("click", () => {
+  if (currentPage < totalPages - 1) fetchProducts(currentPage + 1);
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  fetchProducts();
+});
+
+
 
     form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -535,7 +629,8 @@ const productData = {
       showToast("✅ Product added successfully");
       form.reset();
       preview.style.display = "none";
-      await fetchProducts();
+      await fetchProducts(currentPage); // ✅ stays on the current page
+
     } catch (err) {
       console.error("❌ Product creation error:", err);
       showToast("❌ Failed to create product");
@@ -554,7 +649,8 @@ const productData = {
 
         if (res.ok) {
           showToast("🗑️ Product deleted");
-          await fetchProducts();
+          await fetchProducts(currentPage); // ✅ stays on the current page
+
         } else {
           showToast("❌ Failed to delete");
         }
@@ -585,7 +681,8 @@ async function restockProduct(productId) {
 
     if (res.ok) {
       showToast("✅ Product restocked");
-      await fetchProducts();
+      await fetchProducts(currentPage); // ✅ stays on the current page
+
     } else {
       const errorText = await res.text();
       console.error("❌ Restock error:", errorText);
@@ -598,7 +695,10 @@ async function restockProduct(productId) {
 }
 
 
-    window.addEventListener("DOMContentLoaded", fetchProducts);
+    window.addEventListener("DOMContentLoaded", () => {
+  fetchProducts(0);
+});
+
   </script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {

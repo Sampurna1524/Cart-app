@@ -118,7 +118,9 @@
       container.innerHTML = "";
       const wishlist = getWishlist();
       const products = await fetchAllProducts();
-      const matched = products.filter(p => wishlist.includes(p.id));
+      const matched = (products.content || []).filter(p => wishlist.includes(p.id));
+
+
 
       if (matched.length === 0) {
         container.innerHTML = "<p>No products in your wishlist.</p>";

@@ -10,7 +10,7 @@ const clearCartBtn = document.getElementById("clear-cart-btn");
 let cartId = null;
 let allProducts = [];
 let currentPage = 0;
-const pageSize = 8; // Change as needed
+const pageSize = 10; // Change as needed
 
 
 const isCartPage = cartItems && cartTotal;
@@ -138,19 +138,30 @@ try {
 
 // ========== Products ==========
 async function loadProducts(page = 0) {
+  if (!productList) return; // 💡 Prevents running on pages without productList
+
   currentPage = page;
+  const query = searchInput?.value?.trim().toLowerCase() || "";
+  const category = categorySelect?.value || "";
+  const sort = sortSelect?.value || "";
+
+  let url = `/products?page=${page}&size=${pageSize}`;
+  if (query) url += `&search=${encodeURIComponent(query)}`;
+  if (category && category !== "all") url += `&category=${encodeURIComponent(category)}`;
+  if (sort) url += `&sort=${encodeURIComponent(sort)}`;
+
   try {
-    const res = await fetch(`/products?page=${page}&size=${pageSize}`, {
+    const res = await fetch(url, {
       headers: { ...authHeaders(), Accept: "application/json" },
     });
 
     if (!res.ok) throw new Error(await res.text());
-    const pageData = await res.json();
-    allProducts = pageData.content;
 
-    await populateCategories();
-    applyFilters(); // This renders filtered products
-    renderPaginationControls(pageData.totalPages, page);
+    const { content, totalPages } = await res.json();
+allProducts = content || []; // 👈 Store the product array globally
+
+    displayProducts(content);
+    renderPaginationControls(totalPages, page);
   } catch (e) {
     console.error("❌ Error loading products:", e);
     productList.innerHTML = "<p>⚠️ Failed to load products.</p>";
@@ -184,34 +195,10 @@ async function populateCategories() {
 
 
 function applyFilters() {
-  if (!productList) return;
-  const query = searchInput?.value?.toLowerCase() || "";
-  const selectedCategory = categorySelect?.value || "all";
-  const selectedSort = sortSelect?.value || "";
-
-  let filtered = allProducts.filter((p) => {
-    const nameMatch = p.name.toLowerCase().includes(query);
-    const categoryMatch = selectedCategory === "all" || p.category?.toLowerCase() === selectedCategory;
-    return nameMatch && categoryMatch;
-  });
-
-  switch (selectedSort) {
-    case "price-asc":
-      filtered.sort((a, b) => a.price - b.price);
-      break;
-    case "price-desc":
-      filtered.sort((a, b) => b.price - a.price);
-      break;
-    case "name-asc":
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case "name-desc":
-      filtered.sort((a, b) => b.name.localeCompare(a.name));
-      break;
-  }
-
-  displayProducts(filtered);
+  loadProducts(0); // Re-fetch products from backend starting from page 0 with current filters
 }
+
+
 
 function displayProducts(products) {
   productList.innerHTML = "";
@@ -220,12 +207,15 @@ function displayProducts(products) {
     return;
   }
 
+   const wishlist = getWishlist(); // ✅ Get latest wishlist
+
   products.forEach((p) => {
+    const isWishlisted = wishlist.includes(p.id); // ✅
+
     const card = document.createElement("div");
     card.className = "product-card";
     const img = p.imageUrl || "https://via.placeholder.com/200";
 
-    // Stock message
     let stockMsg = "";
     if (p.quantity <= 0) {
       stockMsg = `<p style="color: gray;">Out of Stock</p>`;
@@ -233,14 +223,12 @@ function displayProducts(products) {
       stockMsg = `<p style="color: red;">Only ${p.quantity} left in stock!</p>`;
     }
 
-    // Quantity input
     const quantityInput = p.quantity > 0
       ? `<label for="qty-${p.id}" style="font-size: 0.9rem;">Qty:</label>
          <input type="number" id="qty-${p.id}" min="1" max="${p.quantity}" value="1" 
                 style="width: 100%; padding: 6px; font-size: 0.9rem; border-radius: 6px; border: 1px solid #ccc;" />`
       : "";
 
-    // Add to Cart button
     const addToCartBtn = `
       <button
         onclick="handleAddToCart(${p.id}); event.stopPropagation();"
@@ -250,22 +238,21 @@ function displayProducts(products) {
         Add to Cart
       </button>`;
 
-   const wishlistBtn = `
-  <div style="display: flex; justify-content: center; margin-top: 8px;">
-    <button onclick="toggleWishlist(${p.id}); event.stopPropagation();" 
-            class="wishlist-btn" 
-            style="
-              padding: 4px 8px;
-              font-size: 0.95rem;
-              border-radius: 8px;
-              background-color: #ffe0ec;
-              color: #ff3366;
-              border: none;
-              cursor: pointer;
-            ">
-      💖
-    </button>
-  </div>`;
+    const wishlistBtn = `
+      <div style="display: flex; justify-content: center; margin-top: 8px;">
+        <button onclick="toggleWishlist(${p.id}); event.stopPropagation();" 
+                class="wishlist-btn" 
+                style="
+                  padding: 4px 8px;
+                  font-size: 1.2rem;
+                  border-radius: 8px;
+                  background-color: transparent;
+                  border: none;
+                  cursor: pointer;
+                ">
+          ${isWishlisted ? "💖" : "🤍"}
+        </button>
+      </div>`;
 
     card.innerHTML = `
       <a href="/product.html?id=${p.id}" class="product-link">
@@ -287,6 +274,7 @@ function displayProducts(products) {
 
 function renderPaginationControls(totalPages, currentPage) {
   const container = document.getElementById("pagination-controls");
+  if (!container) return;
   container.innerHTML = "";
 
   for (let i = 0; i < totalPages; i++) {
@@ -296,12 +284,20 @@ function renderPaginationControls(totalPages, currentPage) {
     btn.style.borderRadius = "8px";
     btn.style.border = "none";
     btn.style.cursor = "pointer";
+    btn.style.margin = "0 4px";
     btn.style.background = i === currentPage ? "#333" : "#eee";
     btn.style.color = i === currentPage ? "#fff" : "#333";
-    btn.onclick = () => loadProducts(i);
+
+    // 🔧 FIX: Call loadProducts(i) directly
+    btn.onclick = () => {
+      loadProducts(i);
+    };
+
     container.appendChild(btn);
   }
 }
+
+
 
 
 // ========== Cart ==========
@@ -463,19 +459,30 @@ sortSelect?.addEventListener("change", applyFilters);
 
 // ========== Start ==========
 window.addEventListener("DOMContentLoaded", () => {
+  populateCategories(); // 👈 ADD THIS
   initCart();
-  updateCartCountBadge(); // ✅ fallback trigger
+  updateCartCountBadge();
 });
+
 
 // ========== Wishlist ==========
 function toggleWishlist(productId) {
-  let wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+  let wishlist = getWishlist();
   if (wishlist.includes(productId)) {
-    wishlist = wishlist.filter((id) => id !== productId);
+    wishlist = wishlist.filter(id => id !== productId);
     showToast("💔 Removed from wishlist");
   } else {
     wishlist.push(productId);
     showToast("💖 Added to wishlist");
   }
+  saveWishlist(wishlist);
+  displayProducts(allProducts); // 🔁 Refresh UI to update heart icons
+}
+
+function getWishlist() {
+  return JSON.parse(localStorage.getItem("wishlist") || "[]");
+}
+
+function saveWishlist(wishlist) {
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
 }

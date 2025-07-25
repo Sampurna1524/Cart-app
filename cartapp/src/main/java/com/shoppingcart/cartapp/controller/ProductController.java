@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,14 +24,37 @@ public class ProductController {
     @Autowired
     private ProductRepository productRepository;
 
-    // ✅ Get all products with pagination
+    // ✅ Get products with search, filter, sort, pagination
     @GetMapping(produces = "application/json")
-    public Page<Product> getAllProducts(
+    public ResponseEntity<Page<Product>> getProductsWithFilters(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "all") String category,
+            @RequestParam(defaultValue = "id-asc") String sort
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return productRepository.findAll(pageable);
+        Pageable pageable;
+
+        switch (sort) {
+            case "price-asc":
+                pageable = PageRequest.of(page, size, Sort.by("price").ascending());
+                break;
+            case "price-desc":
+                pageable = PageRequest.of(page, size, Sort.by("price").descending());
+                break;
+            case "name-desc":
+                pageable = PageRequest.of(page, size, Sort.by("name").descending());
+                break;
+            case "name-asc":
+                pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+                break;
+            default:
+                pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+                break;
+        }
+
+        Page<Product> result = productRepository.searchAndFilterProducts(search, category, pageable);
+        return ResponseEntity.ok(result);
     }
 
     // ✅ Get product by ID
@@ -78,7 +102,7 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> restockProduct(
             @PathVariable Long id,
-            @RequestBody(required = true) RestockRequest request) {
+            @RequestBody RestockRequest request) {
 
         if (request == null || request.getAmount() <= 0) {
             return ResponseEntity.badRequest().body("Amount must be greater than 0");
