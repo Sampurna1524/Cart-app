@@ -158,7 +158,9 @@ async function loadProducts(page = 0) {
     if (!res.ok) throw new Error(await res.text());
 
     const { content, totalPages } = await res.json();
-allProducts = content || []; // 👈 Store the product array globally
+allProducts = content || [];
+sessionStorage.setItem("allProducts", JSON.stringify(allProducts)); // 👈 ADD THIS
+
 
     displayProducts(content);
     renderPaginationControls(totalPages, page);
@@ -459,10 +461,16 @@ sortSelect?.addEventListener("change", applyFilters);
 
 // ========== Start ==========
 window.addEventListener("DOMContentLoaded", () => {
-  populateCategories(); // 👈 ADD THIS
+  populateCategories();
   initCart();
   updateCartCountBadge();
+  
+  // 👉 Call wishlist rendering if on that page
+  if (document.getElementById("wishlist-container")) {
+    renderWishlist();
+  }
 });
+
 
 
 // ========== Wishlist ==========
@@ -486,3 +494,47 @@ function getWishlist() {
 function saveWishlist(wishlist) {
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
 }
+
+async function renderWishlist() {
+  const wishlistContainer = document.getElementById("wishlist-container");
+  if (!wishlistContainer) return;
+
+  const wishlist = getWishlist();
+
+  try {
+    const res = await fetch(`/products/all`, {
+      headers: authHeaders()
+    });
+
+    if (!res.ok) throw new Error("Failed to load all products");
+
+    const allProducts = await res.json();
+    const wishlistItems = allProducts.filter(p => wishlist.includes(p.id));
+    wishlistContainer.innerHTML = "";
+
+    if (wishlistItems.length === 0) {
+      wishlistContainer.innerHTML = "<p>Your wishlist is empty.</p>";
+      return;
+    }
+
+    wishlistItems.forEach((p) => {
+      const img = p.imageUrl || "https://via.placeholder.com/200";
+      const card = document.createElement("div");
+      card.className = "wishlist-card";
+      card.innerHTML = `
+        <a href="/product.html?id=${p.id}" class="wishlist-link">
+          <img src="${img}" alt="${p.name}" class="wishlist-image" />
+          <h3>${p.name}</h3>
+          <p>₹${p.price.toFixed(2)}</p>
+        </a>
+        <button onclick="toggleWishlist(${p.id})">Remove 💔</button>
+      `;
+      wishlistContainer.appendChild(card);
+    });
+
+  } catch (e) {
+    console.error("❌ Failed to load wishlist:", e);
+    wishlistContainer.innerHTML = "<p>⚠️ Could not load wishlist. Please try again.</p>";
+  }
+}
+

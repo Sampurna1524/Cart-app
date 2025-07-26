@@ -50,7 +50,7 @@ public class SecurityConfig {
                     "/", "/index.html", "/login.html", "/signup.html", "/product.html", "/cart.html", "/wishlist.html",
                     "/orders.html", "/admin.html", "/profile.html", "/about.html",
                     "/favicon.ico", "/style.css", "/cart.js", "/admin.js", "/app.js",
-                    "/css/**", "/js/**", "/images/**", "/uploads/**" // uploads is addeds how show all the uploaded product images by the admin
+                    "/css/**", "/js/**", "/images/**", "/uploads/**","/products/all" // uploads is addeds how show all the uploaded product images by the admin
                 ).permitAll() // all the frontend files are allowed to be shown without login
 
                 // ✅ Public API endpoints

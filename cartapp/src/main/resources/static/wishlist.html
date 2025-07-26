@@ -72,130 +72,143 @@
 
   <!-- 📜 Wishlist Script -->
   <script>
-    const container = document.getElementById("wishlist-container");
+  const container = document.getElementById("wishlist-container");
 
-    function getWishlist() {
-      return JSON.parse(localStorage.getItem("wishlist") || "[]");
-    }
+  function getWishlist() {
+    // Always parse stored IDs from localStorage
+    return JSON.parse(localStorage.getItem("wishlist") || "[]").map(Number);
+  }
 
-    function showToast(msg) {
-      const c = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      toast.innerText = msg;
-      c.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
-    }
+  function showToast(msg) {
+    const c = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerText = msg;
+    c.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
 
-    function clearWishlist() {
-      localStorage.removeItem("wishlist");
-      loadWishlist();
-      showToast("🧹 Wishlist cleared!");
-    }
+  function clearWishlist() {
+    localStorage.removeItem("wishlist");
+    loadWishlist();
+    showToast("🧹 Wishlist cleared!");
+  }
 
-    function removeFromWishlist(id) {
-      const wishlist = getWishlist().filter(wid => wid !== id);
-      localStorage.setItem("wishlist", JSON.stringify(wishlist));
-      loadWishlist();
-      showToast("💔 Removed from wishlist");
-    }
+  function removeFromWishlist(id) {
+    const wishlist = getWishlist().filter(wid => wid !== id);
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+    loadWishlist();
+    showToast("💔 Removed from wishlist");
+  }
 
-    async function fetchAllProducts() {
-      const res = await fetch("/products", {
-        headers: authHeaders()
-      });
+  function authHeaders() {
+    const token = sessionStorage.getItem("jwt");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function fetchAllProducts() {
+    try {
+      const res = await fetch("/products/all", { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch");
       return await res.json();
+    } catch (e) {
+      console.error("❌ Failed to fetch products:", e);
+      return [];
+    }
+  }
+
+  async function loadWishlist() {
+    const token = sessionStorage.getItem("jwt");
+    if (!token) {
+      alert("🚫 Please log in to view your wishlist.");
+      window.location.href = "/login.html";
+      return;
     }
 
-    async function loadWishlist() {
-      const token = sessionStorage.getItem("jwt");
-      if (!token) {
-        alert("🚫 Please log in to view your wishlist.");
-        window.location.href = "/login.html";
-        return;
-      }
+    container.innerHTML = "";
 
-      container.innerHTML = "";
-      const wishlist = getWishlist();
-      const products = await fetchAllProducts();
-      const matched = (products.content || []).filter(p => wishlist.includes(p.id));
-
-
-
-      if (matched.length === 0) {
-        container.innerHTML = "<p>No products in your wishlist.</p>";
-        return;
-      }
-
-      matched.forEach(p => {
-        const card = document.createElement("div");
-        card.className = "product-card";
-        card.innerHTML = `
-          <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
-          <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
-          <h3>${p.name}</h3>
-          <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
-          <p>₹${p.price.toFixed(2)}</p>
-          <button onclick="addToCart(${p.id})">Add to Cart</button>
-        `;
-        container.appendChild(card);
-      });
+    const wishlist = getWishlist(); // ID list
+    if (wishlist.length === 0) {
+      container.innerHTML = "<p>No products in your wishlist.</p>";
+      return;
     }
 
-    function authHeaders() {
-      const token = sessionStorage.getItem("jwt");
-      return token ? { Authorization: `Bearer ${token}` } : {};
+    const allProducts = await fetchAllProducts(); // Full product list from server
+
+    // Match only wishlist product IDs
+    const matched = allProducts.filter(p => wishlist.includes(p.id));
+
+    if (matched.length === 0) {
+      container.innerHTML = "<p>No products in your wishlist.</p>";
+      return;
     }
 
-    async function addToCart(productId) {
-      const token = sessionStorage.getItem("jwt");
-      if (!token) {
-        alert("🚫 You must be logged in to add to cart.");
-        window.location.href = "/login.html";
-        return;
-      }
+    matched.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "product-card";
+      card.innerHTML = `
+        <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
+        <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
+        <h3>${p.name}</h3>
+        <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
+        <p>₹${p.price.toFixed(2)}</p>
+        <button onclick="addToCart(${p.id})">Add to Cart</button>
+      `;
+      container.appendChild(card);
+    });
+  }
 
-      let cartId = sessionStorage.getItem("cartId");
+  async function addToCart(productId) {
+    const token = sessionStorage.getItem("jwt");
+    if (!token) {
+      alert("🚫 You must be logged in to add to cart.");
+      window.location.href = "/login.html";
+      return;
+    }
 
-      if (!cartId) {
-        const res = await fetch("/cart", {
-          method: "POST",
-          headers: authHeaders()
-        });
+    let cartId = sessionStorage.getItem("cartId");
 
-        if (!res.ok) {
-          showToast("❌ Failed to create cart.");
-          return;
-        }
-
-        const cart = await res.json();
-        cartId = cart.id;
-        sessionStorage.setItem("cartId", cartId);
-      }
-
-      const res = await fetch(`/cart/${cartId}/add?productId=${productId}&quantity=1`, {
+    if (!cartId) {
+      const res = await fetch("/cart", {
         method: "POST",
         headers: authHeaders()
       });
 
-      if (res.ok) {
-        showToast("🛒 Added to cart!");
-      } else {
-        showToast("❌ Failed to add to cart.");
+      if (!res.ok) {
+        showToast("❌ Failed to create cart.");
+        return;
       }
+
+      const cart = await res.json();
+      cartId = cart.id;
+      sessionStorage.setItem("cartId", cartId);
     }
 
-    // 🌙 Dark mode
-    const darkBtn = document.getElementById("dark-toggle");
-    darkBtn.onclick = () => {
-      document.body.classList.toggle("dark");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-    };
-    if (localStorage.getItem("darkMode") === "true") {
-      document.body.classList.add("dark");
-    }
+    const res = await fetch(`/cart/${cartId}/add?productId=${productId}&quantity=1`, {
+      method: "POST",
+      headers: authHeaders()
+    });
 
-    window.addEventListener("DOMContentLoaded", loadWishlist);
-  </script>
+    if (res.ok) {
+      showToast("🛒 Added to cart!");
+    } else {
+      showToast("❌ Failed to add to cart.");
+    }
+  }
+
+  // 🌙 Dark mode
+  const darkBtn = document.getElementById("dark-toggle");
+  darkBtn.onclick = () => {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  };
+  if (localStorage.getItem("darkMode") === "true") {
+    document.body.classList.add("dark");
+  }
+
+  window.addEventListener("DOMContentLoaded", loadWishlist);
+</script>
+
+  
 </body>
 </html>

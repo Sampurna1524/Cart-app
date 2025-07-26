@@ -126,4 +126,11 @@ public class ProductController {
 
         return ResponseEntity.ok(categories);
     }
+
+    @GetMapping("/all") // instead of "/products/all"
+public List<Product> getAllProducts() {
+    return productRepository.findAll();
+}
+
+
 }
