@@ -132,5 +132,4 @@ public List<Product> getAllProducts() {
     return productRepository.findAll();
 }
 
-
 }
