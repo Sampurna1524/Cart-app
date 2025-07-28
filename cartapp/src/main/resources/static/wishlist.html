@@ -143,19 +143,35 @@
       return;
     }
 
-    matched.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "product-card";
-      card.innerHTML = `
-        <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
-        <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
-        <h3>${p.name}</h3>
-        <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
-        <p>₹${p.price.toFixed(2)}</p>
-        <button onclick="addToCart(${p.id})">Add to Cart</button>
-      `;
-      container.appendChild(card);
-    });
+   matched.forEach(p => {
+  const card = document.createElement("div");
+  card.className = "product-card";
+
+  const inStock = p.quantity > 0;
+
+  const addToCartBtn = document.createElement("button");
+  if (inStock) {
+    addToCartBtn.textContent = "Add to Cart";
+    addToCartBtn.onclick = () => addToCart(p.id);
+  } else {
+    addToCartBtn.textContent = "Out of Stock";
+    addToCartBtn.disabled = true;
+    addToCartBtn.style.backgroundColor = "gray";
+    addToCartBtn.style.cursor = "not-allowed";
+  }
+
+  card.innerHTML = `
+    <button class="remove-wishlist-btn" onclick="removeFromWishlist(${p.id})">❌</button>
+    <img src="${p.imageUrl || 'https://via.placeholder.com/200'}" class="product-image" alt="${p.name}">
+    <h3>${p.name}</h3>
+    <p class="category-tag">📁 ${p.category || "Uncategorized"}</p>
+    <p>₹${p.price.toFixed(2)}</p>
+  `;
+
+  card.appendChild(addToCartBtn);
+  container.appendChild(card);
+});
+
   }
 
   async function addToCart(productId) {
