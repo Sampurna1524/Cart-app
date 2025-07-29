@@ -30,5 +30,9 @@ public class Product {
 
     @Builder.Default
     @Column(nullable = false)
-    private int quantity = 0; // ✅ New: product stock quantity (used for cart & restocking)
+    private int quantity = 0; // ✅ Stock quantity for product management
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean archived = false; // ✅ New: archive status (true = hidden from users)
 }

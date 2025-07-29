@@ -270,6 +270,40 @@ function displayProducts(products) {
         ${wishlistBtn}
       </div>
     `;
+
+    // 🔒 Only show archive/unarchive button in admin view
+if (window.location.pathname.includes("admin.html")) {
+  const archiveBtn = document.createElement("button");
+  archiveBtn.textContent = p.archived ? "Unarchive" : "Archive";
+  archiveBtn.className = "archive-btn";
+  archiveBtn.style = `
+    background-color: ${p.archived ? "#4CAF50" : "#f44336"};
+    color: white;
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  `;
+  archiveBtn.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      const url = `/products/${p.id}/${p.archived ? "unarchive" : "archive"}`;
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: authHeaders()
+      });
+      if (!res.ok) throw new Error(await res.text());
+      showToast(`✅ Product ${p.archived ? "unarchived" : "archived"}`);
+      loadProducts(currentPage); // Refresh list
+    } catch (err) {
+      console.error("Archive toggle failed:", err);
+      showToast("⚠️ Failed to update archive status");
+    }
+  };
+
+  card.querySelector(".product-actions")?.appendChild(archiveBtn);
+}
+
     productList.appendChild(card);
   });
 }

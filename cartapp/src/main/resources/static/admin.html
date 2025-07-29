@@ -375,6 +375,37 @@ button.btn.danger:hover {
   background-color: #0056b3;
 }
 
+.archive-btn {
+  margin-top: 6px;
+}
+.archive-btn {
+  background-color: #6c757d;
+  color: white;
+}
+.archive-btn:hover {
+  background-color: #5a6268;
+}
+
+.tabs {
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: none;
+  background-color: #eee;
+  margin-right: 8px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background-color 0.3s ease ease;
+}
+
+.tab-button.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
   </style>
 </head>
 
@@ -425,18 +456,32 @@ button.btn.danger:hover {
 
     <!-- 📦 Product List -->
     <section class="animate-slide-up">
-      <h2>📦 Product List</h2>
-      <!-- Product List -->
-<div id="product-list" class="product-list"></div>
+  <h2>📦 Product Management</h2>
 
-<!-- Pagination Controls BELOW -->
-<div id="pagination-controls" class="pagination-controls">
-  <button id="prev-page">⬅️ Previous</button>
-  <span id="page-info">Page 1</span>
-  <button id="next-page">Next ➡️</button>
-</div>
+  <!-- Tabs -->
+  <div class="tabs" style="margin-bottom: 1rem;">
+    <button id="activeTab" class="tab-button active">Active Products</button>
+    <button id="archivedTab" class="tab-button">Archived Products</button>
+  </div>
 
-    </section>
+  <!-- Active Products List with Pagination -->
+  <div id="activeProductsSection">
+    <div id="product-list" class="product-list"></div>
+
+    <!-- Pagination Controls for Active Products -->
+    <div id="pagination-controls" class="pagination-controls">
+      <button id="prev-page">⬅️ Previous</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page">Next ➡️</button>
+    </div>
+  </div>
+
+  <!-- Archived Products List, initially hidden; no pagination -->
+  <div id="archivedProductsSection" style="display: none;">
+    <div id="archived-product-list" class="product-list"></div>
+  </div>
+</section>
+
 
 </div>
 
@@ -449,124 +494,197 @@ button.btn.danger:hover {
   <div id="toast-container"></div>
 
   <script>
-    // Dark Mode Toggle
-    const toggleBtn = document.getElementById("dark-toggle");
-    toggleBtn.onclick = () => {
-      document.body.classList.toggle("dark");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-    };
-    if (localStorage.getItem("darkMode") === "true") {
-      document.body.classList.add("dark");
-    }
-
-    // Image preview
-    const imageInput = document.getElementById('product-image');
-    const preview = document.getElementById('image-preview');
-    imageInput.addEventListener('change', function () {
-      const file = this.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          preview.src = reader.result;
-          preview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-      } else {
-        preview.src = "";
-        preview.style.display = "none";
-      }
-    });
-
-    const form = document.getElementById("upload-form");
-    const productList = document.getElementById("admin-product-list");
-    const token = sessionStorage.getItem("jwt");
-
-    function showToast(msg) {
-      const c = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      toast.innerText = msg;
-      c.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
-    }
-
-   let currentPage = 0;
-let totalPages = 1;
-
-async function fetchProducts(page = 0) {
-  try {
-    const response = await fetch(`/products?page=${page}&size=8`);
-    const data = await response.json();
-
-    if (!data.content || !Array.isArray(data.content)) {
-      throw new Error("Invalid response format");
-    }
-
-    renderProducts(data.content);
-    currentPage = data.number;
-    totalPages = data.totalPages;
-
-    updatePagination();
-  } catch (error) {
-    console.error("⚠️ Failed to load products", error);
-    document.getElementById("product-list").innerHTML =
-      "<p style='color: red;'>⚠️ Failed to load products</p>";
+  // Dark Mode Toggle
+  const toggleBtn = document.getElementById("dark-toggle");
+  toggleBtn.onclick = () => {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  };
+  if (localStorage.getItem("darkMode") === "true") {
+    document.body.classList.add("dark");
   }
-}
 
-function renderProducts(products) {
-  const productList = document.getElementById("product-list");
-  productList.innerHTML = "";
-
-  products.forEach((product) => {
-    const productCard = document.createElement("div");
-    productCard.className = "product-card";
-
-    const imageUrl = `/uploads/${product.imageUrl}`; // ✅ fix here
-
-    productCard.innerHTML = `
-  <img src="${encodeURI(product.imageUrl)}" alt="${product.name}" />
-
-  <h3>${product.name}</h3>
-  <p>₹${product.price}</p>
-  <p>Stock: ${product.quantity}</p>
-  <button class="delete-btn" onclick="deleteProduct(${product.id})">Delete</button>
-  <button class="restock-btn" onclick="restockProduct(${product.id})">Restock</button>
-`;
-
-
-    productList.appendChild(productCard);
+  // Image preview for add product form
+  const imageInput = document.getElementById('product-image');
+  const preview = document.getElementById('image-preview');
+  imageInput.addEventListener('change', function () {
+    const file = this.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        preview.src = reader.result;
+        preview.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.src = "";
+      preview.style.display = "none";
+    }
   });
-}
 
+  const form = document.getElementById("upload-form");
+  const token = sessionStorage.getItem("jwt");
 
+  function showToast(msg) {
+    const c = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerText = msg;
+    c.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
 
-function updatePagination() {
-  document.getElementById("page-info").textContent = `Page ${currentPage + 1} of ${totalPages}`;
-  document.getElementById("prev-page").disabled = currentPage === 0;
-  document.getElementById("next-page").disabled = currentPage >= totalPages - 1;
-}
+  // ---- TAB and Product Lists Management ----
+  const activeTabBtn = document.getElementById("activeTab");
+  const archivedTabBtn = document.getElementById("archivedTab");
 
-document.getElementById("prev-page").addEventListener("click", () => {
-  if (currentPage > 0) fetchProducts(currentPage - 1);
-});
+  const activeSection = document.getElementById("activeProductsSection");
+  const archivedSection = document.getElementById("archivedProductsSection");
 
-document.getElementById("next-page").addEventListener("click", () => {
-  if (currentPage < totalPages - 1) fetchProducts(currentPage + 1);
-});
+  const activeProductList = document.getElementById("product-list");
+  const archivedProductList = document.getElementById("archived-product-list");
 
-window.addEventListener("DOMContentLoaded", () => {
-  fetchProducts();
-});
+  const paginationControls = document.getElementById("pagination-controls");
+  const prevPageBtn = document.getElementById("prev-page");
+  const nextPageBtn = document.getElementById("next-page");
+  const pageInfo = document.getElementById("page-info");
 
+  let currentPage = 0;
+  let totalPages = 1;
 
+  // Initial load - active tab & products
+  loadActiveProducts(0);
 
-    form.addEventListener("submit", async (e) => {
+  // Tab click handlers
+  activeTabBtn.addEventListener("click", () => {
+    setActiveTab("active");
+  });
+
+  archivedTabBtn.addEventListener("click", () => {
+    setActiveTab("archived");
+  });
+
+  function setActiveTab(tab) {
+    if (tab === "active") {
+      activeSection.style.display = "block";
+      archivedSection.style.display = "none";
+      activeTabBtn.classList.add("active");
+      archivedTabBtn.classList.remove("active");
+      paginationControls.style.display = "flex"; // show pagination controls
+      loadActiveProducts(currentPage);
+    } else {
+      activeSection.style.display = "none";
+      archivedSection.style.display = "block";
+      archivedTabBtn.classList.add("active");
+      activeTabBtn.classList.remove("active");
+      paginationControls.style.display = "none"; // hide pagination for archived
+      loadArchivedProducts();
+    }
+  }
+
+  // Active Products fetch with pagination
+  async function loadActiveProducts(page = 0) {
+    try {
+      const response = await fetch(`/products?page=${page}&size=8`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error("Failed to load active products");
+      const data = await response.json();
+      if (!data.content || !Array.isArray(data.content)) {
+        throw new Error("Invalid response format");
+      }
+      renderActiveProducts(data.content);
+      currentPage = data.number;
+      totalPages = data.totalPages;
+      updatePagination();
+    } catch (error) {
+      console.error("⚠️ Failed to load active products", error);
+      activeProductList.innerHTML =
+        "<p style='color: red;'>⚠️ Failed to load active products</p>";
+    }
+  }
+
+  function renderActiveProducts(products) {
+    activeProductList.innerHTML = "";
+    if (products.length === 0) {
+      activeProductList.innerHTML = "<p>No active products to display.</p>";
+      return;
+    }
+    products.forEach((product) => {
+      const productCard = document.createElement("div");
+      productCard.className = "product-card";
+      productCard.innerHTML = `
+        <img src="${encodeURI(product.imageUrl)}" alt="${product.name}" />
+        <h3>${product.name}</h3>
+        <p>₹${product.price.toFixed(2)}</p>
+        <p>Stock: ${product.quantity}</p>
+        <button class="delete-btn" onclick="deleteProduct(${product.id})">Delete</button>
+        <button class="restock-btn" onclick="restockProduct(${product.id})">Restock</button>
+        <button class="archive-btn" onclick="toggleArchive(${product.id})">Archive</button>
+      `;
+      activeProductList.appendChild(productCard);
+    });
+  }
+
+  function updatePagination() {
+    pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+    prevPageBtn.disabled = currentPage === 0;
+    nextPageBtn.disabled = currentPage >= totalPages - 1;
+  }
+
+  prevPageBtn.addEventListener("click", () => {
+    if (currentPage > 0) loadActiveProducts(currentPage - 1);
+  });
+
+  nextPageBtn.addEventListener("click", () => {
+    if (currentPage < totalPages - 1) loadActiveProducts(currentPage + 1);
+  });
+
+  // Archived Products fetch (no pagination for now)
+  async function loadArchivedProducts() {
+    try {
+      const response = await fetch("/products/archived", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error("Failed to load archived products");
+      const products = await response.json();
+      renderArchivedProducts(products);
+    } catch (error) {
+      console.error("⚠️ Failed to load archived products", error);
+      archivedProductList.innerHTML = "<p style='color: red;'>⚠️ Failed to load archived products</p>";
+    }
+  }
+
+  function renderArchivedProducts(products) {
+    archivedProductList.innerHTML = "";
+    if (!products || products.length === 0) {
+      archivedProductList.innerHTML = "<p>No archived products to display.</p>";
+      return;
+    }
+    products.forEach((product) => {
+      const productCard = document.createElement("div");
+      productCard.className = "product-card";
+      productCard.innerHTML = `
+        <img src="${encodeURI(product.imageUrl)}" alt="${product.name}" />
+        <h3>${product.name}</h3>
+        <p>₹${product.price.toFixed(2)}</p>
+        <p>Stock: ${product.quantity}</p>
+        <button class="archive-btn" onclick="toggleArchive(${product.id})">Unarchive</button>
+      `;
+      archivedProductList.appendChild(productCard);
+    });
+  }
+
+  // Add Product Form submission (your existing code - mostly unchanged)
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const token = sessionStorage.getItem("jwt");
-    const name = form.name.value;
-    const category = form.category.value;
+    const name = form.name.value.trim();
+    const category = form.category.value.trim();
     const price = parseFloat(form.price.value);
     const file = imageInput.files[0];
 
@@ -593,7 +711,7 @@ window.addEventListener("DOMContentLoaded", () => {
         throw new Error("Upload failed");
       }
 
-      imageUrl = await uploadRes.text(); // backend returns plain string
+      imageUrl = await uploadRes.text();
     } catch (err) {
       console.error("❌ Image upload error:", err);
       showToast("❌ Image upload failed");
@@ -603,14 +721,13 @@ window.addEventListener("DOMContentLoaded", () => {
     // Step 2: Create product
     const quantity = parseInt(form.quantity.value) || 0;
 
-const productData = {
-  name,
-  category,
-  price,
-  quantity,
-  imageUrl,
-};
-
+    const productData = {
+      name,
+      category,
+      price,
+      quantity,
+      imageUrl,
+    };
 
     try {
       const productRes = await fetch("/products", {
@@ -629,77 +746,121 @@ const productData = {
       showToast("✅ Product added successfully");
       form.reset();
       preview.style.display = "none";
-      await fetchProducts(currentPage); // ✅ stays on the current page
 
+      // Refresh active products list or switch to active tab
+      if (activeTabBtn.classList.contains("active")) {
+        loadActiveProducts(currentPage);
+      } else {
+        setActiveTab("active");
+      }
     } catch (err) {
       console.error("❌ Product creation error:", err);
       showToast("❌ Failed to create product");
     }
   });
-    async function deleteProduct(productId) {
-      if (!confirm("Are you sure you want to delete this product?")) return;
 
-      try {
-        const res = await fetch(`/products/${productId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  // Delete product (works for both active and archived depending on active tab)
+  async function deleteProduct(productId) {
+    if (!confirm("Are you sure you want to delete this product?")) return;
 
-        if (res.ok) {
-          showToast("🗑️ Product deleted");
-          await fetchProducts(currentPage); // ✅ stays on the current page
+    try {
+      const res = await fetch(`/products/${productId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      if (res.ok) {
+        showToast("🗑️ Product deleted");
+        // Refresh appropriate list
+        if (activeTabBtn.classList.contains("active")) {
+          loadActiveProducts(currentPage);
         } else {
-          showToast("❌ Failed to delete");
+          loadArchivedProducts();
         }
-      } catch (err) {
-        console.error("Delete failed", err);
-        showToast("⚠️ Error deleting");
+      } else {
+        showToast("❌ Failed to delete");
       }
+    } catch (err) {
+      console.error("Delete failed", err);
+      showToast("⚠️ Error deleting");
     }
-async function restockProduct(productId) {
-  const token = sessionStorage.getItem("jwt");
-  const quantityToAdd = prompt("Enter quantity to restock:");
-  const amount = parseInt(quantityToAdd);
-
-  if (isNaN(amount) || amount <= 0) {
-    showToast("⚠️ Invalid restock quantity");
-    return;
   }
 
-  try {
-    const res = await fetch(`/products/${productId}/restock`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ amount }),
-    });
+  // Restock product (same for active only, assume archived cannot restock)
+  async function restockProduct(productId) {
+    const quantityToAdd = prompt("Enter quantity to restock:");
+    const amount = parseInt(quantityToAdd);
 
-    if (res.ok) {
-      showToast("✅ Product restocked");
-      await fetchProducts(currentPage); // ✅ stays on the current page
-
-    } else {
-      const errorText = await res.text();
-      console.error("❌ Restock error:", errorText);
-      showToast("❌ Failed to restock product");
+    if (isNaN(amount) || amount <= 0) {
+      showToast("⚠️ Invalid restock quantity");
+      return;
     }
-  } catch (err) {
-    console.error("Restock failed", err);
-    showToast("⚠️ Error during restock");
+
+    try {
+      const res = await fetch(`/products/${productId}/restock`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (res.ok) {
+        showToast("✅ Product restocked");
+        if (activeTabBtn.classList.contains("active")) {
+          loadActiveProducts(currentPage);
+        } else {
+          loadArchivedProducts();
+        }
+      } else {
+        const errorText = await res.text();
+        console.error("❌ Restock error:", errorText);
+        showToast("❌ Failed to restock product");
+      }
+    } catch (err) {
+      console.error("Restock failed", err);
+      showToast("⚠️ Error during restock");
+    }
   }
-}
 
+  // Toggle archive/unarchive
+  async function toggleArchive(productId) {
+    try {
+      const res = await fetch(`/products/${productId}/archive`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    window.addEventListener("DOMContentLoaded", () => {
-  fetchProducts(0);
-});
+      if (!res.ok) {
+        const errMsg = await res.text();
+        console.error("❌ Archive toggle error:", errMsg);
+        showToast("❌ Failed to change archive status");
+        return;
+      }
 
-  </script>
+      const message = await res.text();
+      showToast(`📦 ${message}`);
+
+      // Refresh both lists (in case product moved tabs)
+      if (activeTabBtn.classList.contains("active")) {
+        loadActiveProducts(currentPage);
+        loadArchivedProducts();
+      } else {
+        loadArchivedProducts();
+        loadActiveProducts(currentPage);
+      }
+    } catch (err) {
+      console.error("❌ Archive error:", err);
+      showToast("⚠️ Could not update archive status");
+    }
+  }
+</script>
+
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     const profileBtn = document.getElementById("profile-btn");

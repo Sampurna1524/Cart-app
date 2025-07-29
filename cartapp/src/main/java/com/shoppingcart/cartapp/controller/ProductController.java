@@ -4,16 +4,12 @@ import com.shoppingcart.cartapp.dto.RestockRequest;
 import com.shoppingcart.cartapp.model.Product;
 import com.shoppingcart.cartapp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.*;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -24,7 +20,7 @@ public class ProductController {
     @Autowired
     private ProductRepository productRepository;
 
-    // ✅ Get products with search, filter, sort, pagination
+    // ✅ Get products with search, filter, sort, pagination (non-archived only)
     @GetMapping(produces = "application/json")
     public ResponseEntity<Page<Product>> getProductsWithFilters(
             @RequestParam(defaultValue = "0") int page,
@@ -127,9 +123,36 @@ public class ProductController {
         return ResponseEntity.ok(categories);
     }
 
-    @GetMapping("/all") // instead of "/products/all"
-public List<Product> getAllProducts() {
-    return productRepository.findAll();
-}
+    // ✅ Get all non-archived products (used by user index page)
+    @GetMapping("/all")
+    public List<Product> getAllProducts() {
+        return productRepository.findByArchivedFalse();
+    }
 
+    // *** NEW: Get all archived products (admin only) ***
+    @GetMapping("/archived")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Product> getArchivedProducts() {
+        return productRepository.findByArchivedTrue();
+    }
+
+    // ✅ Toggle archive/unarchive a product (admin only)
+    @PutMapping("/{id}/archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> toggleArchive(@PathVariable Long id) {
+        Optional<Product> optionalProduct = productRepository.findById(id);
+        if (optionalProduct.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
+        }
+
+        Product product = optionalProduct.get();
+        product.setArchived(!product.isArchived());
+        productRepository.save(product);
+
+        String message = product.isArchived()
+                ? "Product archived successfully"
+                : "Product unarchived successfully";
+
+        return ResponseEntity.ok(message);
+    }
 }
