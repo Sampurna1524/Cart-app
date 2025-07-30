@@ -199,7 +199,7 @@
     }
 
     const token = sessionStorage.getItem("jwt");
-    const userId = sessionStorage.getItem("userId");
+    let userId = null;
 
     if (!token) {
       alert("You are not logged in. Redirecting to login...");
@@ -214,7 +214,9 @@
       if (!res.ok) throw new Error("Unauthorized");
       return res.json();
     })
-    .then(data => {
+   .then(data => {
+  userId = data.id;
+  sessionStorage.setItem("userId", userId);
       document.getElementById("username").textContent = data.username || "Unknown";
       document.getElementById("email").textContent = `📧 ${data.email || "Not provided"}`;
       document.getElementById("role").textContent = `🔐 Role: ${data.role || "USER"}`;
@@ -234,28 +236,42 @@
       window.location.href = "/login.html";
     });
 
-    document.getElementById("profilePicInput").addEventListener("change", async function () {
-      const file = this.files[0];
-      if (!file) return;
+   document.getElementById("profilePicInput").addEventListener("change", async function () {
+  const file = this.files[0];
+  if (!file) return;
+  if (!userId) {
+    alert("User ID not available yet. Please wait for the profile to load.");
+    return;
+  }
 
-      const formData = new FormData();
-      formData.append("file", file);
+  const formData = new FormData();
+  formData.append("file", file);
 
-      try {
-        const res = await fetch(`/users/${userId}/upload-profile`, {
+  try {
+    const res = await fetch(`/users/${userId}/upload-profile`, {
+
           method: "POST",
           headers: { "Authorization": "Bearer " + token },
           body: formData
         });
 
-        const result = await res.json();
-        if (res.ok) {
-          document.getElementById("avatar-container").innerHTML =
-            `<img src="${result.imageUrl}" alt="Profile Picture" />`;
-          alert("✅ Profile picture updated!");
-        } else {
-          alert("❌ Upload failed: " + result);
-        }
+       let result = null;
+try {
+  result = await res.json();
+} catch(parseErr) {
+  result = null;
+}
+if (res.ok && result && result.imageUrl) {
+  document.getElementById("avatar-container").innerHTML =
+    `<img src="${result.imageUrl}" alt="Profile Picture" />`;
+  alert("✅ Profile picture updated!");
+} else {
+  let message = (result && result.error) ?
+    result.error :
+    "Upload failed. (Server error or invalid image?)";
+  alert("❌ " + message);
+}
+
       } catch (err) {
         console.error("Upload error:", err);
         alert("Something went wrong while uploading.");
