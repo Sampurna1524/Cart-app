@@ -2,13 +2,14 @@ package com.shoppingcart.cartapp.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shoppingcart.cartapp.model.Order;
 import com.shoppingcart.cartapp.model.Product;
+import com.shoppingcart.cartapp.repository.OrderRepository;
 import com.shoppingcart.cartapp.repository.ProductRepository;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,53 +29,88 @@ public class GeminiChatService {
 
     private final OkHttpClient client = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ProductRepository productRepository;
 
-    // ✅ Change this if your frontend URL differs
+    private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+
     private static final String PRODUCT_BASE_URL = "http://localhost:8080/product.html?id=";
 
-    public GeminiChatService(ProductRepository productRepository) {
+    public GeminiChatService(ProductRepository productRepository, OrderRepository orderRepository) {
         this.productRepository = productRepository;
+        this.orderRepository = orderRepository;
     }
 
-    public String askGemini(String userMessage) {
+    /**
+     ✅ Now accepts userId from ChatController
+     ✅ Only fetches order history when user asks for it
+     */
+    public String askGemini(String userMessage, Long userId) {
         try {
-            // 🧠 Step 1: Get all products
+            // 💾 Load all products
             List<Product> allProducts = productRepository.findAll();
-            if (allProducts == null || allProducts.isEmpty()) {
-                return "⚠️ No products found in the database. Please add some first!";
+
+            if (allProducts.isEmpty()) {
+                return "⚠️ No products found in the database.";
             }
 
-            // 🧠 Step 2: Prepare product summary
+            // 🧠 Detect if the question is about order history
+            boolean wantsOrderHistory = userMessage.toLowerCase()
+                    .matches(".*(my order|orders|order history|previous|past|purchase).*");
+
+            // 🧠 ORDER HISTORY (only when user asks)
+            String pastOrdersSummary = "";
+            if (wantsOrderHistory && userId != null) {
+                List<Order> orders = orderRepository.findByUserId(userId);
+
+                if (!orders.isEmpty()) {
+                    pastOrdersSummary = orders.stream()
+                            .flatMap(order -> order.getItems().stream())
+                            .map(item -> String.format(
+                                    "• %s (₹%.2f) Qty: %d",
+                                    safe(item.getProduct().getName()),
+                                    item.getProduct().getPrice(),
+                                    item.getQuantity()))
+                            .collect(Collectors.joining("\n"));
+                } else {
+                    pastOrdersSummary = "You haven't placed any orders yet.";
+                }
+            }
+
+            // 🧠 PRODUCT SUMMARY (provided globally for suggestions)
             String productSummary = allProducts.stream()
                     .limit(100)
-                    .map(p -> String.format("Name: %s | Price: ₹%.2f | Category: %s",
-                            safe(p.getName()), p.getPrice(), safe(p.getCategory())))
+                    .map(p -> String.format(
+                            "Name: %s | Price: ₹%.2f | Category: %s | ProductId: %d",
+                            safe(p.getName()), p.getPrice(), safe(p.getCategory()), p.getId()))
                     .collect(Collectors.joining("\n"));
 
-            // 🧠 Step 3: Construct Gemini prompt
+            // ✨ Prompt dynamically includes order history only if needed
             String prompt = String.format("""
-                    You are SmartCart AI — a helpful shopping assistant for an e-commerce website.
-                    Use the following product data to recommend, search, or compare products.
-                    Be concise, friendly, and only refer to these products.
+                You are SmartCart AI — a shopping assistant. Answer conversationally.
 
-                    PRODUCT CATALOG:
-                    %s
+                USER QUESTION:
+                %s
 
-                    USER QUESTION:
-                    %s
+                %s
 
-                    Rules:
-                    - Recommend products relevant to user's query.
-                    - If comparing, show differences in price and category.
-                    - If searching by budget, list products under that price.
-                    - Respond conversationally but factually.
-                    - Avoid Markdown (*, **, #).
-                    - Format like:
-                      • Product Name (₹Price) — short comment.
-                    """, productSummary, userMessage);
+                PRODUCT CATALOG (for suggestions):
+                %s
 
-            // ✅ Step 4: JSON request body
+                Rules:
+                - If user asks about order history, summarize it from the section above.
+                - Otherwise ignore order history completely.
+                - When suggesting products, always show this format:
+                  • Name (₹Price) — short reason.
+                - No markdown (*, **, ##).
+                """,
+                    userMessage,
+                    wantsOrderHistory && !pastOrdersSummary.isBlank() ?
+                            "ORDER HISTORY:\n" + pastOrdersSummary + "\n" :
+                            "",
+                    productSummary
+            );
+
+            // ✅ Build JSON for Gemini API
             String jsonRequest = objectMapper.writeValueAsString(
                     objectMapper.createObjectNode()
                             .set("contents", objectMapper.createArrayNode().add(
@@ -85,7 +121,6 @@ public class GeminiChatService {
                             ))
             );
 
-            // ✅ Step 5: Send request to Gemini
             String url = GEMINI_API_BASE + geminiModel + ":generateContent?key=" + geminiApiKey;
 
             RequestBody body = RequestBody.create(jsonRequest, MediaType.get("application/json"));
@@ -97,56 +132,31 @@ public class GeminiChatService {
 
             try (Response response = client.newCall(request).execute()) {
                 String responseBody = response.body() != null ? response.body().string() : "";
-
-                if (!response.isSuccessful()) {
-                    System.err.println("❌ Gemini API Error: " + responseBody);
-                    return "⚠️ Gemini API error: " + response.code() + " - " + response.message();
-                }
-
                 JsonNode root = objectMapper.readTree(responseBody);
                 JsonNode textNode = root.at("/candidates/0/content/parts/0/text");
-
-                if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-                    System.err.println("⚠️ Unexpected Gemini response: " + responseBody);
-                    return "⚠️ Gemini gave an empty or unexpected response.";
-                }
 
                 String formatted = formatGeminiResponse(textNode.asText());
                 return injectProductLinks(formatted, allProducts).trim();
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "⚠️ Network or I/O error while contacting Gemini API.";
         } catch (Exception e) {
             e.printStackTrace();
-            return "⚠️ Oops! Something went wrong while contacting Gemini API.";
+            return "⚠️ Something went wrong while contacting SmartCart AI.";
         }
     }
 
-    // 🧼 Step 6: Clean formatting
     private String formatGeminiResponse(String text) {
-        if (text == null) return "";
-        return text
-                .replaceAll("\\*\\*", "")
-                .replaceAll("\\*", "")
-                .replaceAll("(?m)^\\s*[-•]\\s*", "• ")
-                .replaceAll("\\n{2,}", "\n")
-                .replaceAll("(?m)^\\s+", "")
-                .trim();
+        return text.replaceAll("\\*", "").trim();
     }
 
-    // 🧠 Step 7: Add clickable links for product names
     private String injectProductLinks(String response, List<Product> allProducts) {
-        if (response == null || response.isBlank()) return response;
-
         String result = response;
         for (Product p : allProducts) {
             if (p.getName() == null) continue;
-            String name = Pattern.quote(p.getName());
-            String regex = "(?i)" + name + "(?=\\s*\\(₹?\\d|\\s|$)";
+
+            String regex = "(?i)" + Pattern.quote(p.getName()) + "(?=\\s|$|\\(|₹)";
             String replacement = String.format(
-                    "<a href='%s%d' target='_blank' style='text-decoration:none;color:#007bff;'>%s</a>",
+                    "<a href='%s%d' target='_blank' style='color:#007bff;text-decoration:none;'>%s</a>",
                     PRODUCT_BASE_URL, p.getId(), p.getName()
             );
             result = result.replaceAll(regex, Matcher.quoteReplacement(replacement));

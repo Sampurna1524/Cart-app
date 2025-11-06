@@ -207,39 +207,60 @@
   <!-- ✅ App Logic -->
 <script src="/app.js"></script>
 
-<!-- 🌙 Dark Mode + Address Save Script -->
 <script>
-  const darkBtn = document.getElementById("dark-toggle");
-  darkBtn.onclick = () => {
-    document.body.classList.toggle("dark");
-    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-  };
-  if (localStorage.getItem("darkMode") === "true") {
-    document.body.classList.add("dark");
+  // ✅ Do NOT redeclare checkoutBtn (it already exists in app.js)
+  const addressLine = document.getElementById("address-line");
+  const city = document.getElementById("city");
+  const state = document.getElementById("state");
+  const zipcode = document.getElementById("zipcode");
+
+  // ✅ Address Validation Regex
+  const streetRegex = /^[a-zA-Z0-9\s,.'-]{10,}$/;
+  const cityRegex = /^[a-zA-Z\s]{3,}$/;
+  const stateRegex = /^[a-zA-Z\s]{3,}$/;
+  const pinRegex = /^[1-9][0-9]{5}$/;
+
+  function validate(field, regex) {
+    if (!regex.test(field.value.trim())) {
+      field.style.border = "2px solid red";
+      field.classList.add("shake");
+      setTimeout(() => field.classList.remove("shake"), 400);
+      return false;
+    }
+    field.style.border = "2px solid #4CAF50";
+    return true;
   }
 
-  // ✅ Prefill saved shipping address on load
-  window.addEventListener("DOMContentLoaded", () => {
-    const savedAddress = JSON.parse(localStorage.getItem("lastAddress"));
-    if (savedAddress) {
-      document.getElementById("address-line").value = savedAddress.addressLine || "";
-      document.getElementById("city").value = savedAddress.city || "";
-      document.getElementById("state").value = savedAddress.state || "";
-      document.getElementById("zipcode").value = savedAddress.zipcode || "";
-    }
-  });
+  // ✅ Intercept checkout BEFORE app.js listener runs
+  checkoutBtn.addEventListener("click", function (e) {
 
-  // ✅ Save address to localStorage when placing order
-  document.getElementById("checkout-btn").addEventListener("click", () => {
-    const address = {
-      addressLine: document.getElementById("address-line").value,
-      city: document.getElementById("city").value,
-      state: document.getElementById("state").value,
-      zipcode: document.getElementById("zipcode").value,
-    };
-    localStorage.setItem("lastAddress", JSON.stringify(address));
-  });
+    const valid =
+      validate(addressLine, streetRegex) &
+      validate(city, cityRegex) &
+      validate(state, stateRegex) &
+      validate(zipcode, pinRegex);
+
+    if (!valid) {
+      e.stopImmediatePropagation(); // ⛔ Prevent app.js checkout
+      alert("⚠️ Enter a valid address before placing order.");
+      return false;
+    }
+
+  }, true); // <-- CAPTURE MODE (runs BEFORE app.js handler)
+
 </script>
+
+<style>
+  .shake { animation: shake 0.2s linear 2; }
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+</style>
+
 
 </body>
 </html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Insights | SmartCart</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Poppins", sans-serif;
+            background: #f7faff;
+        }
+
+        /* Navbar */
+        nav {
+            background: #0078ff;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+        nav a:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        /* Dashboard Layout */
+        .container {
+            padding: 20px;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        /* Cards */
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: 0.25s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card h2 {
+            margin: 10px 0;
+            color: #0078ff;
+        }
+
+        /* Filter buttons */
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .filter-btn {
+            border: none;
+            padding: 8px 20px;
+            border-radius: 50px;
+            background: #e5e9ff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .filter-btn.active {
+            background: #0078ff;
+            color: white;
+        }
+
+        /* Charts wrapper */
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h2>📊 Order Insights</h2>
+    <a href="/index.html">← Back to Home</a>
+</nav>
+
+<div class="container">
+
+    <!-- Stats -->
+    <div class="stat-cards">
+        <div class="card">
+            <h3>Total Orders</h3>
+            <h2 id="totalOrders">0</h2>
+        </div>
+
+        <div class="card">
+            <h3>Total Spent</h3>
+            <h2 id="totalSpent">₹0</h2>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all">All Orders</button>
+        <button class="filter-btn" data-filter="30d">Last 30 Days</button>
+        <button class="filter-btn" data-filter="7d">Last 7 Days</button>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+        <div class="chart-card">
+            <canvas id="categoryChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <canvas id="orderTrendChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script src="orders-dashboard.js"></script>
+
+</body>
+</html>

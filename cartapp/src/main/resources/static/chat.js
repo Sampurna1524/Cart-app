@@ -9,7 +9,7 @@ document.body.appendChild(chatButton);
 // Create floating chat window (hidden by default)
 const chatWindow = document.createElement("div");
 chatWindow.id = "chatbot-window";
-chatWindow.style.display = "none"; // ✅ Hidden by default
+chatWindow.style.display = "none";
 
 chatWindow.innerHTML = `
   <div id="chat-header">
@@ -18,7 +18,7 @@ chatWindow.innerHTML = `
   </div>
   <div id="chat-body" class="chat-body"></div>
   <div id="chat-input-area">
-    <input type="text" id="chat-input" placeholder="Ask me anything..." />
+    <input type="text" id="chat-input" placeholder="Ask me anything... (e.g., show my order history)" />
     <button id="chat-send">➤</button>
   </div>
 `;
@@ -27,7 +27,6 @@ document.body.appendChild(chatWindow);
 // === Styling ===
 const style = document.createElement("style");
 style.textContent = `
-  /* Floating Chat Button */
   #chatbot-btn {
     position: fixed;
     bottom: 25px;
@@ -42,11 +41,9 @@ style.textContent = `
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     z-index: 9998;
-    transition: background-color 0.3s;
   }
   #chatbot-btn:hover { background-color: #005fcc; }
 
-  /* Chat Window */
   #chatbot-window {
     position: fixed;
     bottom: 100px;
@@ -57,9 +54,9 @@ style.textContent = `
     border-radius: 16px;
     box-shadow: 0 6px 15px rgba(0,0,0,0.25);
     flex-direction: column;
+    display: none;
     overflow: hidden;
     z-index: 9999;
-    display: none;
     font-family: "Poppins", sans-serif;
   }
 
@@ -67,18 +64,9 @@ style.textContent = `
     background: #0078ff;
     color: white;
     padding: 10px;
-    font-weight: bold;
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  #chat-close {
-    background: transparent;
-    color: white;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
   }
 
   .chat-body {
@@ -95,7 +83,6 @@ style.textContent = `
     padding: 8px 10px;
     border-radius: 12px;
     max-width: 80%;
-    word-wrap: break-word;
   }
 
   .user-msg {
@@ -121,7 +108,6 @@ style.textContent = `
     border: none;
     border-radius: 8px;
     padding: 8px;
-    outline: none;
   }
 
   #chat-send {
@@ -134,66 +120,51 @@ style.textContent = `
     cursor: pointer;
   }
 
-  /* Product link formatting */
   .product-link {
     color: #0078ff;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: underline;
-  }
-  .product-link:hover {
-    color: #0056b3;
-  }
-
-  /* Smooth open animation */
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
   }
 `;
 document.head.appendChild(style);
 
-// === Query DOM elements after creation ===
+// === DOM refs ===
 const chatBody = chatWindow.querySelector("#chat-body");
 const chatInput = chatWindow.querySelector("#chat-input");
 const chatSend = chatWindow.querySelector("#chat-send");
 const chatClose = chatWindow.querySelector("#chat-close");
 
-// === Show / Hide chat ===
+// === Show/Hide ===
 chatButton.addEventListener("click", () => {
-  if (chatWindow.style.display === "none") {
-    chatWindow.style.display = "flex";
-    chatWindow.style.animation = "slideUp 0.3s ease-out";
-    chatInput.focus();
-  } else {
-    chatWindow.style.display = "none";
+  chatWindow.style.display = chatWindow.style.display === "none" ? "flex" : "none";
+  chatInput.focus();
+});
+chatClose.addEventListener("click", () => (chatWindow.style.display = "none"));
+
+// ✅ Get Logged-in User Session
+function getUserSession() {
+  try {
+    const user = JSON.parse(sessionStorage.getItem("user"));
+    const token = sessionStorage.getItem("jwt"); // <-- FIXED KEY
+
+    return {
+      userId: user?.id ?? null,
+      token: token ?? null
+    };
+  } catch {
+    return { userId: null, token: null };
   }
-});
+}
 
-chatClose.addEventListener("click", () => {
-  chatWindow.style.display = "none";
-});
-
-// === Chat send logic ===
-chatSend.addEventListener("click", sendMessage);
-chatInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
-
-// ✅ Format Gemini responses
+// ✅ Clean & format bot messages (links)
 function formatResponse(text) {
-  // Remove asterisks and clean bullet points
-  text = text.replace(/\*/g, "").replace(/\s*-\s*/g, "<br>• ");
-
-  // Add newlines for readability
-  text = text.replace(/\n/g, "<br>");
-
-  // Convert [id:11] → clickable link
-  text = text.replace(/\[id:(\d+)\]/g, (match, id) => {
-    return `<a href="http://localhost:8080/product.html?id=${id}" target="_blank" class="product-link">View Product</a>`;
-  });
-
+  text = text.replace(/\*/g, "").replace(/\n/g, "<br>");
   return text;
 }
+
+// === Send Message ===
+chatSend.addEventListener("click", sendMessage);
+chatInput.addEventListener("keypress", (e) => e.key === "Enter" && sendMessage());
 
 async function sendMessage() {
   const message = chatInput.value.trim();
@@ -204,32 +175,36 @@ async function sendMessage() {
 
   appendMessage("bot", "⏳ Thinking...");
 
+  const { userId, token } = getUserSession();
+
   try {
     const response = await fetch("http://localhost:8080/api/chat/ask", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
+      body: JSON.stringify({ message, userId }) // ✅ SEND USER ID TO BACKEND
     });
 
     const data = await response.json();
     const lastBotMsg = chatBody.querySelector(".bot-msg:last-child");
 
-    // ✅ Apply formatting
-    const formatted = data.response
+    lastBotMsg.innerHTML = data.response
       ? formatResponse(data.response)
       : "⚠️ No response from server.";
 
-    lastBotMsg.innerHTML = formatted;
-  } catch (err) {
+  } catch {
     const lastBotMsg = chatBody.querySelector(".bot-msg:last-child");
     lastBotMsg.textContent = "⚠️ Error contacting AI.";
   }
 }
 
+// === Append messages to UI ===
 function appendMessage(sender, text) {
   const msg = document.createElement("div");
   msg.className = `chat-msg ${sender === "user" ? "user-msg" : "bot-msg"}`;
-  msg.innerHTML = text; // ✅ Allows HTML for formatted text
+  msg.innerHTML = text;
   chatBody.appendChild(msg);
   chatBody.scrollTop = chatBody.scrollHeight;
 }

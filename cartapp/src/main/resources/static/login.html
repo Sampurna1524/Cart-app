@@ -190,7 +190,9 @@
     };
 
     sessionStorage.setItem("jwt", token);
-    sessionStorage.setItem("user", JSON.stringify(user)); // ✅ Required for app.js
+sessionStorage.setItem("user", JSON.stringify(user));
+sessionStorage.setItem("userId", user.id);   // ✅ REQUIRED for analytics page
+
 
     let role = "ROLE_USER";
     try {

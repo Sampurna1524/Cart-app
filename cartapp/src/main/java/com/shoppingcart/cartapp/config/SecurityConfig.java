@@ -22,53 +22,63 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-            // 🔒 Disable CSRF for REST APIs
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
 
-            // 🧩 Allow H2 Console (disable frame options)
-            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                // ✅ Required for H2 console
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
 
-            // 🚫 Stateless (JWT only)
-            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // ✅ JWT (no session stored)
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authorizeHttpRequests(auth -> auth
-                // ✅ Public static frontend files
-                .requestMatchers(
-                    "/", "/index.html", "/login.html", "/signup.html", "/product.html", "/cart.html",
-                    "/wishlist.html", "/orders.html", "/admin.html", "/profile.html", "/about.html",
-                    "/favicon.ico", "/style.css", "/chat.js", "/cart.js", "/admin.js", "/app.js",
-                    "/css/**", "/js/**", "/images/**", "/uploads/**"
-                ).permitAll()
+                .authorizeHttpRequests(auth -> auth
 
-                // ✅ Allow chatbot backend API (Gemini)
-                .requestMatchers("/api/chat/**").permitAll()
+                        // ✅ Public pages & assets
+                        .requestMatchers(
+                                "/", "/index.html", "/login.html", "/signup.html", "/product.html",
+                                "/cart.html", "/wishlist.html", "/orders.html", "/orders-dashboard.html",
+                                "/admin.html", "/profile.html", "/about.html",
+                                "/favicon.ico", "/style.css",
+                                "/app.js", "/chat.js", "/cart.js", "/admin.js", "/orders-dashboard.js",
+                                "/css/**", "/js/**", "/images/**", "/uploads/**"
+                        ).permitAll()
 
-                // ✅ Public authentication + product APIs
-                .requestMatchers("/users/register", "/users/login").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
+                        // ✅ Public Gemini Chatbot
+                        .requestMatchers("/api/chat/**").permitAll()
 
-                // 👤 User endpoints
-                .requestMatchers("/users/me").authenticated()
-                .requestMatchers(HttpMethod.POST, "/users/*/upload-profile").authenticated()
+                        // ✅ Register/Login public
+                        .requestMatchers("/users/register", "/users/login").permitAll()
 
-                // 🛒 Cart, orders, wishlist — requires login
-                .requestMatchers("/cart/**", "/orders/**", "/wishlist/**")
-                    .hasAnyRole("USER", "ADMIN")
+                        // ✅ H2 console open
+                        .requestMatchers("/h2-console/**").permitAll()
 
-                // 🧑‍💼 Admin endpoints
-                .requestMatchers(HttpMethod.POST, "/products").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/products/upload").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/products/{id}").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/products/{id}/restock").hasRole("ADMIN")
+                        // ✅ Product browsing without login
+                        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
 
-                // 🚨 Everything else
-                .anyRequest().authenticated()
-            )
+                        // ✅ Order Analytics allowed without auth (IMPORTANT: matches first)
+                        .requestMatchers(HttpMethod.GET, "/orders/analysis/**").permitAll()
 
-            // ✅ Add JWT filter before UsernamePasswordAuthenticationFilter
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                        // 🛒 Protected APIs (except analytics above)
+                        .requestMatchers("/cart/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/orders/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/wishlist/**").hasAnyRole("USER", "ADMIN")
+
+                        // 👤 User-specific authenticated actions
+                        .requestMatchers("/users/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/users/*/upload-profile").authenticated()
+
+                        // 🧑‍💼 Admin-only
+                        .requestMatchers(HttpMethod.POST, "/products").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/products/upload").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/products/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/products/{id}/restock").hasRole("ADMIN")
+
+                        .anyRequest().authenticated()
+                )
+
+                // ✅ Add JWT token parser
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
